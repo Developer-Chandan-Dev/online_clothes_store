@@ -6,3 +6,5 @@
 /admin/.env
 /frontend/.env
 /backend/.env
+
+/admin/dist

@@ -4,12 +4,24 @@ import axios from "axios";
 import { backendUrl, currency } from "../App";
 import { toast } from "react-toastify";
 import { assets } from "../assets/assets";
-import { Trash2, Edit, Search, Filter, X, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from "lucide-react";
+import {
+  Trash2,
+  Edit,
+  Search,
+  Filter,
+  X,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
+  Loader2
+} from "lucide-react";
 
 const Orders = ({ token }) => {
   const [orders, setOrders] = useState([]);
   const [filteredOrders, setFilteredOrders] = useState([]);
-  
+  const [isLoading, setIsLoading] = useState(false);
+
   // Filter states
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -17,13 +29,14 @@ const Orders = ({ token }) => {
   const [dateRange, setDateRange] = useState({ start: "", end: "" });
   const [sortOption, setSortOption] = useState("newest");
   const [showFilters, setShowFilters] = useState(false);
-  
+
   // Pagination states
   const [currentPage, setCurrentPage] = useState(1);
   const [ordersPerPage, setOrdersPerPage] = useState(10);
 
   const fetchAllOrders = async () => {
     if (!token) return;
+    setIsLoading(true);
 
     try {
       const response = await axios.post(
@@ -40,47 +53,54 @@ const Orders = ({ token }) => {
       }
     } catch (error) {
       toast.error(error.message);
+    } finally {
+      setIsLoading(false);
     }
   };
 
   // Apply filters whenever filter criteria change
   useEffect(() => {
     let result = [...orders];
-    
+
     // Apply search filter
     if (searchTerm) {
-      result = result.filter(order => 
-        (order.address.firstName + " " + order.address.lastName).toLowerCase().includes(searchTerm.toLowerCase()) ||
-        order.address.phone.includes(searchTerm) ||
-        order._id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        order.items.some(item => item.name.toLowerCase().includes(searchTerm.toLowerCase()))
+      result = result.filter(
+        (order) =>
+          (order.address.firstName + " " + order.address.lastName)
+            .toLowerCase()
+            .includes(searchTerm.toLowerCase()) ||
+          order.address.phone.includes(searchTerm) ||
+          order._id.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          order.items.some((item) =>
+            item.name.toLowerCase().includes(searchTerm.toLowerCase())
+          )
       );
     }
-    
+
     // Apply status filter
     if (statusFilter !== "all") {
-      result = result.filter(order => order.status === statusFilter);
+      result = result.filter((order) => order.status === statusFilter);
     }
-    
+
     // Apply payment filter
     if (paymentFilter !== "all") {
-      result = result.filter(order => 
+      result = result.filter((order) =>
         paymentFilter === "paid" ? order.payment : !order.payment
       );
     }
-    
+
     // Apply date range filter
     if (dateRange.start && dateRange.end) {
       const startDate = new Date(dateRange.start);
       const endDate = new Date(dateRange.end);
-      result = result.filter(order => {
+      result = result.filter((order) => {
         const orderDate = new Date(order.date);
         return orderDate >= startDate && orderDate <= endDate;
       });
     }
-    
+
     // Apply sorting
-    switch(sortOption) {
+    switch (sortOption) {
       case "newest":
         result = result.sort((a, b) => new Date(b.date) - new Date(a.date));
         break;
@@ -102,7 +122,7 @@ const Orders = ({ token }) => {
       default:
         break;
     }
-    
+
     setFilteredOrders(result);
     setCurrentPage(1); // Reset to first page when filters change
   }, [orders, searchTerm, statusFilter, paymentFilter, dateRange, sortOption]);
@@ -137,7 +157,9 @@ const Orders = ({ token }) => {
   };
 
   const handleOrderDelete = async (id) => {
-    const confirmDelete = window.confirm("Are you sure you want to delete this order?");
+    const confirmDelete = window.confirm(
+      "Are you sure you want to delete this order?"
+    );
     if (!confirmDelete) return;
 
     try {
@@ -157,7 +179,14 @@ const Orders = ({ token }) => {
   };
 
   // Get unique statuses for filter dropdown
-  const statuses = ["all", "Order Placed", "Packing", "Shipped", "Out for delivery", "Delivered"];
+  const statuses = [
+    "all",
+    "Order Placed",
+    "Packing",
+    "Shipped",
+    "Out for delivery",
+    "Delivered",
+  ];
 
   const resetFilters = () => {
     setSearchTerm("");
@@ -177,14 +206,17 @@ const Orders = ({ token }) => {
   const renderPaginationButtons = () => {
     const buttons = [];
     const maxVisibleButtons = 5;
-    
-    let startPage = Math.max(1, currentPage - Math.floor(maxVisibleButtons / 2));
+
+    let startPage = Math.max(
+      1,
+      currentPage - Math.floor(maxVisibleButtons / 2)
+    );
     let endPage = Math.min(totalPages, startPage + maxVisibleButtons - 1);
-    
+
     if (endPage - startPage + 1 < maxVisibleButtons) {
       startPage = Math.max(1, endPage - maxVisibleButtons + 1);
     }
-    
+
     if (startPage > 1) {
       buttons.push(
         <button
@@ -196,10 +228,14 @@ const Orders = ({ token }) => {
         </button>
       );
       if (startPage > 2) {
-        buttons.push(<span key="ellipsis-start" className="px-2">...</span>);
+        buttons.push(
+          <span key="ellipsis-start" className="px-2">
+            ...
+          </span>
+        );
       }
     }
-    
+
     for (let i = startPage; i <= endPage; i++) {
       buttons.push(
         <button
@@ -213,10 +249,14 @@ const Orders = ({ token }) => {
         </button>
       );
     }
-    
+
     if (endPage < totalPages) {
       if (endPage < totalPages - 1) {
-        buttons.push(<span key="ellipsis-end" className="px-2">...</span>);
+        buttons.push(
+          <span key="ellipsis-end" className="px-2">
+            ...
+          </span>
+        );
       }
       buttons.push(
         <button
@@ -228,7 +268,7 @@ const Orders = ({ token }) => {
         </button>
       );
     }
-    
+
     return buttons;
   };
 
@@ -240,7 +280,7 @@ const Orders = ({ token }) => {
     <div className="p-4">
       <div className="mb-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
         <h2 className="text-xl font-bold">Order Management</h2>
-        
+
         {/* Search Bar */}
         <div className="relative w-full md:w-64">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
@@ -252,13 +292,13 @@ const Orders = ({ token }) => {
             onChange={(e) => setSearchTerm(e.target.value)}
           />
           {searchTerm && (
-            <X 
+            <X
               className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 cursor-pointer"
               onClick={() => setSearchTerm("")}
             />
           )}
         </div>
-        
+
         {/* Filter and Sort Controls */}
         <div className="flex gap-2">
           <button
@@ -268,7 +308,7 @@ const Orders = ({ token }) => {
             <Filter className="h-4 w-4" />
             <span>Filters</span>
           </button>
-          
+
           <select
             value={sortOption}
             onChange={(e) => setSortOption(e.target.value)}
@@ -290,7 +330,9 @@ const Orders = ({ token }) => {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {/* Status Filter */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Order Status</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Order Status
+              </label>
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
@@ -303,10 +345,12 @@ const Orders = ({ token }) => {
                 ))}
               </select>
             </div>
-            
+
             {/* Payment Filter */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Payment Status</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Payment Status
+              </label>
               <select
                 value={paymentFilter}
                 onChange={(e) => setPaymentFilter(e.target.value)}
@@ -317,26 +361,32 @@ const Orders = ({ token }) => {
                 <option value="unpaid">Unpaid</option>
               </select>
             </div>
-            
+
             {/* Date Range Filter */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Date Range</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Date Range
+              </label>
               <div className="grid grid-cols-2 gap-2">
                 <input
                   type="date"
                   value={dateRange.start}
-                  onChange={(e) => setDateRange({...dateRange, start: e.target.value})}
+                  onChange={(e) =>
+                    setDateRange({ ...dateRange, start: e.target.value })
+                  }
                   className="px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
                 <input
                   type="date"
                   value={dateRange.end}
-                  onChange={(e) => setDateRange({...dateRange, end: e.target.value})}
+                  onChange={(e) =>
+                    setDateRange({ ...dateRange, end: e.target.value })
+                  }
                   className="px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
             </div>
-            
+
             {/* Reset Button */}
             <div className="flex items-end">
               <button
@@ -354,9 +404,10 @@ const Orders = ({ token }) => {
       <div className="mb-2 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
         <div className="text-sm text-gray-500">
           Showing {currentOrders.length} of {filteredOrders.length} orders
-          {filteredOrders.length !== orders.length && ` (filtered from ${orders.length} total)`}
+          {filteredOrders.length !== orders.length &&
+            ` (filtered from ${orders.length} total)`}
         </div>
-        
+
         <div className="flex items-center gap-2">
           <span className="text-sm text-gray-500">Orders per page:</span>
           <select
@@ -377,7 +428,16 @@ const Orders = ({ token }) => {
 
       {/* Orders List */}
       <div className="mb-4">
-        {currentOrders.length > 0 ? (
+        {isLoading && (
+          <div className="flex justify-center items-center h-96">
+            <div className="text-center">
+              <Loader2 className="h-16 w-16 animate-spin text-gray-400 mx-auto" />
+              <p className="mt-4 text-gray-600">Loading products...</p>
+            </div>
+          </div>
+        )}
+
+        {!isLoading && currentOrders.length > 0 ? (
           currentOrders.map((order) => (
             <div
               className="grid grid-cols-1 sm:grid-cols-[0.5fr_2fr_1fr] lg:grid-cols-[0.5fr_2fr_1fr_1fr_1fr_1fr_0.5fr] gap-3 items-start border-2 border-gray-200 p-5 md:p-8 my-3 md:my-4 text-xs sm:text-sm text-gray-700"
@@ -434,9 +494,9 @@ const Orders = ({ token }) => {
                 <option value="Delivered">Delivered</option>
               </select>
               <div className="flex items-center justify-end gap-2">
-                <Trash2 
-                  className="size-[20px] transition-all text-red-400 hover:text-red-600 cursor-pointer" 
-                  onClick={() => handleOrderDelete(order._id)} 
+                <Trash2
+                  className="size-[20px] transition-all text-red-400 hover:text-red-600 cursor-pointer"
+                  onClick={() => handleOrderDelete(order._id)}
                 />
                 <Edit className="size-[18px] transition-all text-blue-400 hover:text-blue-600 cursor-pointer" />
               </div>
@@ -455,7 +515,7 @@ const Orders = ({ token }) => {
           <div className="text-sm text-gray-500">
             Page {currentPage} of {totalPages}
           </div>
-          
+
           <div className="flex items-center gap-2">
             {/* First Page Button */}
             <button
@@ -465,7 +525,7 @@ const Orders = ({ token }) => {
             >
               <ChevronsLeft className="h-4 w-4" />
             </button>
-            
+
             {/* Previous Page Button */}
             <button
               onClick={() => goToPage(currentPage - 1)}
@@ -474,12 +534,10 @@ const Orders = ({ token }) => {
             >
               <ChevronLeft className="h-4 w-4" />
             </button>
-            
+
             {/* Page Number Buttons */}
-            <div className="flex gap-1">
-              {renderPaginationButtons()}
-            </div>
-            
+            <div className="flex gap-1">{renderPaginationButtons()}</div>
+
             {/* Next Page Button */}
             <button
               onClick={() => goToPage(currentPage + 1)}
@@ -488,7 +546,7 @@ const Orders = ({ token }) => {
             >
               <ChevronRight className="h-4 w-4" />
             </button>
-            
+
             {/* Last Page Button */}
             <button
               onClick={() => goToPage(totalPages)}

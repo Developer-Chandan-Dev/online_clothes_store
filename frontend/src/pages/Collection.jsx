@@ -10,11 +10,13 @@ import {
   FiChevronsLeft,
   FiChevronsRight,
 } from "react-icons/fi";
+import { Loader2 } from "lucide-react";
 
 const Collection = () => {
   const { products, currency } = useContext(ShopContext);
   const [filteredProducts, setFilteredProducts] = useState([]);
   const [showFilter, setShowFilter] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   // Search and filter states
   const [searchTerm, setSearchTerm] = useState("");
@@ -43,53 +45,61 @@ const Collection = () => {
 
   // Apply filters and sorting
   useEffect(() => {
-    let result = [...products];
+    setIsLoading(true);
+    
+    // Simulate loading delay for better UX
+    const timer = setTimeout(() => {
+      let result = [...products];
 
-    // Apply search filter
-    if (searchTerm) {
+      // Apply search filter
+      if (searchTerm) {
+        result = result.filter(
+          (item) =>
+            item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            item.description?.toLowerCase().includes(searchTerm.toLowerCase())
+        );
+      }
+
+      // Apply category filter
+      if (category.length > 0) {
+        result = result.filter((item) => category.includes(item.category));
+      }
+
+      // Apply subcategory filter
+      if (subCategory.length > 0) {
+        result = result.filter((item) => subCategory.includes(item.subCategory));
+      }
+
+      // Apply price range filter
       result = result.filter(
-        (item) =>
-          item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          item.description?.toLowerCase().includes(searchTerm.toLowerCase())
+        (item) => item.price >= priceRange[0] && item.price <= priceRange[1]
       );
-    }
 
-    // Apply category filter
-    if (category.length > 0) {
-      result = result.filter((item) => category.includes(item.category));
-    }
+      // Apply sorting
+      switch (sortType) {
+        case "low-high":
+          result.sort((a, b) => a.price - b.price);
+          break;
+        case "high-low":
+          result.sort((a, b) => b.price - a.price);
+          break;
+        case "newest":
+          result.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+          break;
+        case "rating":
+          result.sort((a, b) => b.rating - a.rating);
+          break;
+        default:
+          // Default sorting (relevant)
+          break;
+      }
 
-    // Apply subcategory filter
-    if (subCategory.length > 0) {
-      result = result.filter((item) => subCategory.includes(item.subCategory));
-    }
+      setFilteredProducts(result);
+      setCurrentPage(1); // Reset to first page when filters change
+      setIsLoading(false);
+    }, 500); // 500ms delay to prevent flickering on fast filters
 
-    // Apply price range filter
-    result = result.filter(
-      (item) => item.price >= priceRange[0] && item.price <= priceRange[1]
-    );
-
-    // Apply sorting
-    switch (sortType) {
-      case "low-high":
-        result.sort((a, b) => a.price - b.price);
-        break;
-      case "high-low":
-        result.sort((a, b) => b.price - a.price);
-        break;
-      case "newest":
-        result.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-        break;
-      case "rating":
-        result.sort((a, b) => b.rating - a.rating);
-        break;
-      default:
-        // Default sorting (relevant)
-        break;
-    }
-
-    setFilteredProducts(result);
-    setCurrentPage(1); // Reset to first page when filters change
+    return () => clearTimeout(timer);
   }, [products, searchTerm, category, subCategory, priceRange, sortType]);
 
   // Get current products for pagination
@@ -298,8 +308,15 @@ const Collection = () => {
           </div>
         </div>
 
-        {/* Products Grid */}
-        {currentProducts.length > 0 ? (
+        {/* Loading and Products Grid */}
+        {isLoading ? (
+          <div className="flex justify-center items-center h-96">
+            <div className="text-center">
+              <Loader2 className="h-16 w-16 animate-spin text-gray-400 mx-auto" />
+              <p className="mt-4 text-gray-600">Loading products...</p>
+            </div>
+          </div>
+        ) : currentProducts.length > 0 ? (
           <>
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 gap-y-6">
               {currentProducts.map((item) => (

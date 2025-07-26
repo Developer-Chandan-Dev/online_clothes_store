@@ -14,6 +14,7 @@ import {
   ChevronRight,
   ChevronsLeft,
   ChevronsRight,
+  Loader2
 } from "lucide-react";
 import UpdateProductPopup from "../components/UpdateProductPopup";
 import PreviewProduct from "../components/ProductPreview";
@@ -24,6 +25,7 @@ const List = ({ token }) => {
   const [isPopupOpen, setIsPopupOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [preview, setPreview] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   // Filter states
   const [searchTerm, setSearchTerm] = useState("");
@@ -37,6 +39,7 @@ const List = ({ token }) => {
   const [productsPerPage, setProductsPerPage] = useState(10);
 
   const fetchList = async () => {
+    setIsLoading(true);
     try {
       const response = await axios.get(backendUrl + "/api/product/list");
       if (response.data.success) {
@@ -52,6 +55,8 @@ const List = ({ token }) => {
     } catch (error) {
       console.log(error);
       toast.error(error.message);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -406,7 +411,15 @@ const List = ({ token }) => {
         </div>
 
         {/* Product Items */}
-        {currentProducts.length > 0 ? (
+        {isLoading && (
+          <div className="flex justify-center items-center h-96">
+            <div className="text-center">
+              <Loader2 className="h-16 w-16 animate-spin text-gray-400 mx-auto" />
+              <p className="mt-4 text-gray-600">Loading products...</p>
+            </div>
+          </div>
+        )}
+        {!isLoading && currentProducts.length > 0 ? (
           currentProducts.map((item, index) => (
             <div
               className="grid grid-cols-[1fr_3fr_1fr] md:grid-cols-[1fr_3fr_1fr_1fr_1fr] items-center gap-2 py-1 px-2 border text-sm"
