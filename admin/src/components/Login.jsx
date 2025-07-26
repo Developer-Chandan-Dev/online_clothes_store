@@ -1,9 +1,7 @@
 import axios from 'axios'
-import React, { useState } from 'react'
+import { useState } from 'react'
 import { backendUrl } from '../App'
 import { toast } from 'react-toastify'
-import { useContext } from 'react'
-import { ShopContext } from '../../../frontend/src/context/ShopContext'
 import { useNavigate } from 'react-router-dom'
 
 const Login = ({setToken}) => {
