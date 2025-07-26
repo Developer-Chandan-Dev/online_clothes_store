@@ -1,32 +1,52 @@
-import React, { useContext, useEffect, useState } from 'react'
+import { useContext, useEffect, useState } from 'react'
 import { ShopContext } from '../context/ShopContext'
-import { assets } from '../assets/assets';
+import { FiSearch, FiX } from 'react-icons/fi';
 import { useLocation } from 'react-router-dom';
 
 const SearchBar = () => {
-
-    const { search, setSearch, showSearch, setShowSearch} = useContext(ShopContext);
-    const [visible,setVisible] = useState(false)
+    const { search, setSearch, showSearch, setShowSearch } = useContext(ShopContext);
+    const [visible, setVisible] = useState(false);
     const location = useLocation();
 
-    useEffect(()=>{
+    useEffect(() => {
         if (location.pathname.includes('collection')) {
             setVisible(true);
+        } else {
+            setVisible(false);
         }
-        else {
-            setVisible(false)
-        }
-    },[location])
+    }, [location]);
     
-  return showSearch && visible ? (
-    <div className='border-t border-b bg-gray-50 text-center'>
-      <div className='inline-flex items-center justify-center border border-gray-400 px-5 py-2 my-5 mx-3 rounded-full w-3/4 sm:w-1/2'>
-        <input value={search} onChange={(e)=>setSearch(e.target.value)} className='flex-1 outline-none bg-inherit text-sm' type="text" placeholder='Search'/>
-        <img className='w-4' src={assets.search_icon} alt="" />
-      </div>
-      <img onClick={()=>setShowSearch(false)} className='inline w-3 cursor-pointer' src={assets.cross_icon} alt="" />
-    </div>
-  ) : null
-}
+    return showSearch && visible ? (
+        <div className='border-t border-b bg-gray-50 py-4'>
+            <div className='container mx-auto px-4'>
+                <div className='flex items-center justify-center max-w-2xl mx-auto relative'>
+                    <div className='relative w-full'>
+                        <FiSearch className='absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400' />
+                        <input
+                            value={search}
+                            onChange={(e) => setSearch(e.target.value)}
+                            className='w-full pl-12 pr-10 py-3 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent'
+                            type="text"
+                            placeholder='Search for products...'
+                        />
+                        {search && (
+                            <FiX
+                                className='absolute right-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400 cursor-pointer hover:text-gray-600'
+                                onClick={() => setSearch('')}
+                            />
+                        )}
+                    </div>
+                    <FiX
+                        className='ml-3 h-5 w-5 text-gray-500 cursor-pointer hover:text-gray-700'
+                        onClick={() => setShowSearch(false)}
+                    />
+                </div>
+                <div className='mt-2 text-sm text-center text-gray-500'>
+                    Press Enter to search
+                </div>
+            </div>
+        </div>
+    ) : null;
+};
 
-export default SearchBar
+export default SearchBar;

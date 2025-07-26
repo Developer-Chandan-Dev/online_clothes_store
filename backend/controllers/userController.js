@@ -2,6 +2,7 @@ import validator from "validator";
 import bcrypt from "bcrypt"
 import jwt from 'jsonwebtoken'
 import userModel from "../models/userModel.js";
+import productModel from "../models/productModel.js";
 
 
 const createToken = (id) => {
@@ -25,7 +26,7 @@ const loginUser = async (req, res) => {
         if (isMatch) {
 
             const token = createToken(user._id)
-            res.json({ success: true, token })
+            res.json({ success: true, token, _id: user?._id })
 
         }
         else {
@@ -80,17 +81,33 @@ const registerUser = async (req, res) => {
     }
 }
 
+const profile = async (req, res) => {
+    try {
+        const userId = req.params.id;
+
+        const profile = await userModel.findById(userId);
+
+        if (!profile) {
+            return res.status(404).json({ success: false, message: "User not found" })
+        }
+
+        res.status(200).json(profile);
+    } catch (error) {
+        console.log(error);
+        res.status(500).json({success:false, message:"Internal Server Error"})
+    }
+}
 // Route for admin login
 const adminLogin = async (req, res) => {
     try {
-        
-        const {email,password} = req.body
+
+        const { email, password } = req.body
 
         if (email === process.env.ADMIN_EMAIL && password === process.env.ADMIN_PASSWORD) {
-            const token = jwt.sign(email+password,process.env.JWT_SECRET);
-            res.json({success:true,token})
+            const token = jwt.sign(email + password, process.env.JWT_SECRET);
+            res.json({ success: true, token })
         } else {
-            res.json({success:false,message:"Invalid credentials"})
+            res.json({ success: false, message: "Invalid credentials" })
         }
 
     } catch (error) {
@@ -99,5 +116,56 @@ const adminLogin = async (req, res) => {
     }
 }
 
+const userProfile = async (req, res) => {
 
-export { loginUser, registerUser, adminLogin }
+}
+
+// const favorite
+const favoriteProducts = async (req, res) => {
+    try {
+
+        const { userId, productId } = req.body;
+
+        if (!userId || !productId) {
+            return res.status(400).json({ message: "User ID and Product ID are required" })
+        }
+
+        const user = await userModel.findById(userId);
+        if (!user) {
+            return res.status(404).json({ message: "User not found" })
+        }
+
+        const index = user.favorites.indexOf(productId);
+        if (index === -1) {
+            user.favorites.push(productId); // Add to favorites
+        } else {
+            user.favorites.splice(index, 1); // Remove from favorites
+        }
+
+        await user.save();
+
+        res.status(200).json({ success: true, message: `${index === -1 ? 'Added in Favorites' : 'Removed from Favorites'}`, favorites: user.favorites });
+    } catch (error) {
+        console.log(error);
+        res.json({ success: false, message: error.message })
+    }
+}
+
+const getFavoriteProducts = async (req, res) => {
+    try {
+        const { userId } = req.body;
+
+        const user = await userModel.findById(userId);
+        if (!user) {
+            return res.status(404).json({ success: false, message: "User not found" })
+        }
+        // console.log(user?.favorites);
+        const favoriteProducts = await userModel.findById(userId).select("-password -cartData").populate("favorites")
+
+        res.status(200).json({ success: true, favorites: favoriteProducts, favoriteIds: user?.favorites })
+    } catch (error) {
+        console.log(error);
+    }
+}
+
+export { loginUser, registerUser, profile, adminLogin, favoriteProducts, getFavoriteProducts }

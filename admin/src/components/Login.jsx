@@ -2,19 +2,28 @@ import axios from 'axios'
 import React, { useState } from 'react'
 import { backendUrl } from '../App'
 import { toast } from 'react-toastify'
+import { useContext } from 'react'
+import { ShopContext } from '../../../frontend/src/context/ShopContext'
+import { useNavigate } from 'react-router-dom'
 
 const Login = ({setToken}) => {
 
     const [email,setEmail] = useState('')
     const [password,setPassword] = useState('')
 
+    // const { navigate } = useContext(ShopContext);
+    const navigate = useNavigate();
     const onSubmitHandler = async (e) => {
         try {
             e.preventDefault();
             const response = await axios.post(backendUrl + '/api/user/admin',{email,password})
+            console.log(response);
             if (response.data.success) {
+                console.log(response.data);
                 setToken(response.data.token)
+                navigate("/");
             } else {
+                console.log(response);
                 toast.error(response.data.message)
             }
              

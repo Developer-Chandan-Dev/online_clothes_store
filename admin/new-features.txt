@@ -1,0 +1,18 @@
+Admin Panel
+
+Price :
+Purchase/Investment Price
+Actual Price
+Sales Price
+
+New Category Addition
+Stock Addition
+Sold Calculation
+Total Revenue and Profit Calculation
+
+Listing :
+Update product
+
+Orders :
+Update products
+Delete products

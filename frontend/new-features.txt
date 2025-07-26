@@ -1,0 +1,15 @@
+Frontend
+
+Home Page
+Hero section Slider with dynamic banner and content
+Cart and favourite addition button
+
+
+Collection Page
+Sorting (A-Z and Z-A and by average rating)
+Pagination
+
+My Profile Page addition
+Favourite products page
+Privacy Policy Page
+

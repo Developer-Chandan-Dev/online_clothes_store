@@ -31,7 +31,7 @@ const Orders = () => {
       }
       
     } catch (error) {
-      
+      console.log(error);
     }
   }
 

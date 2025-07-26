@@ -9,18 +9,19 @@ a.active hr{
 }
 
 *{
-    font-family: Outfit;
+    font-family: Poppins;
 }
 
 .prata-regular {
-    font-family: "Prata", serif;
+    /* font-family: "Prata", serif; */
+    font-family: Poppins;
     font-weight: 400;
     font-style: normal;
   }
 
-  ::-webkit-scrollbar{
+  /* ::-webkit-scrollbar{
     display: none;
-  }
+  } */
   
   @media (max-width:640px) {
     a.active{
