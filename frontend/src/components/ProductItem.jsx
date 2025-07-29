@@ -2,7 +2,7 @@
 import { useContext } from "react";
 import { ShopContext } from "../context/ShopContext";
 import { Link } from "react-router-dom";
-import { Heart, Plus } from "lucide-react";
+import { Heart } from "lucide-react";
 import axios from "axios";
 import { toast } from "react-toastify";
 import { FavsContext } from "../context/FavsContext";
@@ -50,12 +50,7 @@ const ProductItem = ({ id, image, name, price }) => {
             alt=""
           />
         </Link>
-        {/* <div className='absolute top-0 left-0 w-56 h-20 bg-white opacity-0 hover:opacity-70 transition ease-in-out'></div> */}
-        <div className="absolute bottom-2 left-5 w-32 h-10 transition ease-in-out flex items-center gap-2">
-          <div className="w-7 h-7 bg-white flex items-center justify-center rounded-full drop-shadow">
-            <Plus className="size-5 text-orange-500 font-extrabold" />
-          </div>
-        </div>
+
         <div className="absolute top-2 right-2 rounded-full h-7 w-7 drop-shadow bg-white flex items-center justify-center">
           <Heart
             className={`size-5 ${

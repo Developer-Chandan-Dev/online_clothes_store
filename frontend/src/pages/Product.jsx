@@ -4,14 +4,21 @@ import { ShopContext } from "../context/ShopContext";
 import { assets } from "../assets/assets";
 import RelatedProducts from "../components/RelatedProducts";
 import Review from "../components/Review";
+import { FavsContext } from "../context/FavsContext";
+import { toast } from "react-toastify";
+import axios from "axios";
+import { Heart } from "lucide-react";
 
 const Product = () => {
   const { productId } = useParams();
-  const { products, currency, addToCart } = useContext(ShopContext);
+  const { products, currency, addToCart, token, backendUrl } =
+    useContext(ShopContext);
   const [productData, setProductData] = useState(false);
   const [image, setImage] = useState("");
   const [size, setSize] = useState("");
   const [descTrue, setDescTrue] = useState(true);
+  const { favIds, setFavIds, getFavoritesProducts, setFavsCount } =
+    useContext(FavsContext);
 
   const fetchProductData = async () => {
     products.map((item) => {
@@ -26,6 +33,30 @@ const Product = () => {
   useEffect(() => {
     fetchProductData();
   }, [productId, products]);
+
+  const match = favIds.includes(productId);
+
+  const toggleFavorite = async (productId) => {
+    if (token) {
+      try {
+        const res = await axios.put(
+          backendUrl + "/api/user/favorites",
+          { productId },
+          { headers: { token } }
+        );
+        console.log(res);
+        if (res?.data?.success === true) {
+          toast.success(res?.data?.message);
+          setFavIds(res?.data?.favorites);
+          setFavsCount(res?.data?.favorites?.length);
+          getFavoritesProducts(token);
+        }
+      } catch (error) {
+        console.log(error);
+        toast.error(error.message);
+      }
+    }
+  };
 
   return productData ? (
     <div className="border-t-2 pt-10 transition-opacity ease-in duration-500 opacity-100">
@@ -44,7 +75,15 @@ const Product = () => {
               />
             ))}
           </div>
-          <div className="w-full sm:w-[80%]">
+          <div className="w-full sm:w-[80%] relative">
+            <div className="size-14 bg-white rounded-full drop-shadow-xl absolute right-3 top-3 flex items-center justify-center">
+              <Heart
+                className={`size-10 ${
+                  match && "fill-pink-600"
+                } text-pink-600 cursor-pointer`}
+                onClick={() => toggleFavorite(productId)}
+              />
+            </div>
             <img className="w-full h-auto" src={image} alt="" />
           </div>
         </div>
