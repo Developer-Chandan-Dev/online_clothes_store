@@ -4,6 +4,7 @@ import { backendUrl } from '../App'
 import { toast } from 'react-toastify'
 import { useNavigate } from 'react-router-dom'
 
+// eslint-disable-next-line react/prop-types
 const Login = ({setToken}) => {
 
     const [email,setEmail] = useState('')

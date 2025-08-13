@@ -11,7 +11,9 @@ const authUser = async (req, res, next) => {
     try {
 
         const token_decode = jwt.verify(token, process.env.JWT_SECRET)
-        req.body.userId = token_decode.id
+
+        req.body.userId = token_decode._id;
+        req.user = token_decode;
         next()
 
     } catch (error) {
@@ -21,4 +23,11 @@ const authUser = async (req, res, next) => {
 
 }
 
-export default authUser
+const admin = (req, res, next) => {
+    if (req.user && req.user.role === "admin") {
+        next();
+    } else {
+        return next(new ErrorResponse("Not authorized as admin", 403));
+    }
+};
+export { authUser, admin }

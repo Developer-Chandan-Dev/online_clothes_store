@@ -5,10 +5,10 @@ import ProductItem from "./ProductItem";
 import { Loader2 } from "lucide-react";
 
 const LatestCollection = () => {
-  const { products } = useContext(ShopContext);
+  const { products, token } = useContext(ShopContext);
   const [latestProducts, setLatestProducts] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
-
+  
   useEffect(() => {
     setIsLoading(true);
 

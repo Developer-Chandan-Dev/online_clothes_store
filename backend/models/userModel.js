@@ -5,7 +5,12 @@ const userSchema = new mongoose.Schema({
     email: { type: String, required: true, unique: true },
     password: { type: String, required: true },
     cartData: { type: Object, default: {} },
-    favorites: [{ type: mongoose.Schema.Types.ObjectId, ref: "product" }]
+    favorites: [{ type: mongoose.Schema.Types.ObjectId, ref: "product" }],
+    role: {
+        type: String,
+        enum: ["user", "admin"],
+        default: "user",
+    },
 }, { minimize: false })
 
 const userModel = mongoose.models.user || mongoose.model('user', userSchema);
