@@ -22,7 +22,6 @@ const loginUser = async (req, res) => {
         const isMatch = await bcrypt.compare(password, user.password);
 
         if (isMatch) {
-
             const token = createToken(user._id)
             res.json({ success: true, token, userData: { _id: user?._id, name: user?.name, email: user?.email } })
 
@@ -30,6 +29,8 @@ const loginUser = async (req, res) => {
         else {
             res.json({ success: false, message: 'Invalid credentials' })
         }
+
+
 
     } catch (error) {
         console.log(error);
@@ -133,14 +134,14 @@ const userProfile = async (req, res) => {
 // const favorite
 const favoriteProducts = async (req, res) => {
     try {
+        const { productId } = req.body;
+        const { id } = req.user;
 
-        const { userId, productId } = req.body;
-
-        if (!userId || !productId) {
+        if (!productId) {
             return res.status(400).json({ message: "User ID and Product ID are required" })
         }
 
-        const user = await userModel.findById(userId);
+        const user = await userModel.findById(id);
         if (!user) {
             return res.status(404).json({ message: "User not found" })
         }
@@ -163,14 +164,14 @@ const favoriteProducts = async (req, res) => {
 
 const getFavoriteProducts = async (req, res) => {
     try {
-        const { userId } = req.body;
+        const { id } = req.user;
 
-        const user = await userModel.findById(userId);
+        const user = await userModel.findById(id);
         if (!user) {
             return res.status(404).json({ success: false, message: "User not found" })
         }
         // console.log(user?.favorites);
-        const favoriteProducts = await userModel.findById(userId).select("-password -cartData").populate("favorites")
+        const favoriteProducts = await userModel.findById(id).select("-password -cartData").populate("favorites")
 
         res.status(200).json({ success: true, favorites: favoriteProducts, favoriteIds: user?.favorites })
     } catch (error) {

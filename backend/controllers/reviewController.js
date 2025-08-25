@@ -1,12 +1,12 @@
 import Review from "../models/reviewModel.js";
 import Product from "../models/productModel.js";
 import asyncHandler from "../utils/asyncHandler.js";
-import ErrorResponse from "../middleware/errorHandler.js";
+import { ErrorResponse } from "../middleware/errorHandler.js";
 
 // Add a new review
 export const addReview = asyncHandler(async (req, res, next) => {
-    const { userId, productId, rating, comment } = req.body;
-    // const userId = req.user.id;
+    const { productId, rating, comment } = req.body;
+    const userId = req.user.id;
 
     try {
         // Check if the user has already reviewed this product
@@ -25,7 +25,6 @@ export const addReview = asyncHandler(async (req, res, next) => {
             comment,
         });
 
-        console.log(review);
         // Update product rating
         const product = await Product.findById(productId);
         const allReviews = await Review.find({ productId });
@@ -44,7 +43,7 @@ export const addReview = asyncHandler(async (req, res, next) => {
             data: review,
         });
     } catch (error) {
-        console.log(error);
+        console.log(error, 48);
         return next(new ErrorResponse("Internal Server Error", 500));
     }
 });
@@ -52,12 +51,16 @@ export const addReview = asyncHandler(async (req, res, next) => {
 // Get all reviews for a product
 export const getProductReviews = asyncHandler(async (req, res, next) => {
     const { productId } = req.params;
+    console.log("Product Id", productId);
 
     try {
         const reviews = await Review.find({ productId }).populate(
             "userId",
-            "username email imageUrl"
+            "name email"
         );
+        // const reviews = await Review.find({ productId });
+
+        console.log("Reviews : ", reviews, 62);
         res.status(200).json({ success: true, data: reviews });
     } catch (error) {
         console.log(error);

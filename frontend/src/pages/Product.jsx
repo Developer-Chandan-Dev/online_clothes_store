@@ -1,22 +1,23 @@
 import { useContext, useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { ShopContext } from "../context/ShopContext";
-import { assets } from "../assets/assets";
-import RelatedProducts from "../components/RelatedProducts";
+import RelatedProducts from "../components/RelatedPr7oducts";
 import Review from "../components/Review";
 import { FavsContext } from "../context/FavsContext";
 import { toast } from "react-toastify";
 import axios from "axios";
-import { Heart } from "lucide-react";
+import { Heart, Star, Truck, Shield, RotateCcw, ChevronRight, Info, Check } from "lucide-react";
 
 const Product = () => {
   const { productId } = useParams();
   const { products, currency, addToCart, token, backendUrl } =
     useContext(ShopContext);
   const [productData, setProductData] = useState(false);
-  const [image, setImage] = useState("");
-  const [size, setSize] = useState("");
-  const [descTrue, setDescTrue] = useState(true);
+  const [selectedImage, setSelectedImage] = useState("");
+  const [selectedSize, setSelectedSize] = useState("");
+  const [selectedColor, setSelectedColor] = useState("");
+  const [activeTab, setActiveTab] = useState("description");
+  const [quantity, setQuantity] = useState(1);
   const { favIds, setFavIds, getFavoritesProducts, setFavsCount } =
     useContext(FavsContext);
 
@@ -24,7 +25,7 @@ const Product = () => {
     products.map((item) => {
       if (item._id === productId) {
         setProductData(item);
-        setImage(item.image[0]);
+        setSelectedImage(item.image[0]);
         return null;
       }
     });
@@ -34,7 +35,7 @@ const Product = () => {
     fetchProductData();
   }, [productId, products]);
 
-  const match = favIds.includes(productId);
+  const isFavorite = favIds.includes(productId);
 
   const toggleFavorite = async (productId) => {
     if (token) {
@@ -44,7 +45,6 @@ const Product = () => {
           { productId },
           { headers: { token } }
         );
-        console.log(res);
         if (res?.data?.success === true) {
           toast.success(res?.data?.message);
           setFavIds(res?.data?.favorites);
@@ -55,142 +55,375 @@ const Product = () => {
         console.log(error);
         toast.error(error.message);
       }
+    } else {
+      toast.info("Please login to add to favorites");
     }
   };
 
+  const handleAddToCart = () => {
+    if (!selectedSize && productData.sizes.length > 0) {
+      toast.error("Please select a size");
+      return;
+    }
+    addToCart(productData._id, selectedSize, selectedColor, quantity);
+    toast.success("Added to cart!");
+  };
+
+  const incrementQuantity = () => {
+    if (quantity < (productData.stockQuantity || 10)) {
+      setQuantity(quantity + 1);
+    }
+  };
+
+  const decrementQuantity = () => {
+    if (quantity > 1) {
+      setQuantity(quantity - 1);
+    }
+  };
+
+  // Calculate discount percentage if original price exists
+  const discountPercentage = productData.originalPrice 
+    ? Math.round(((productData.originalPrice - productData.price) / productData.originalPrice) * 100)
+    : 0;
+
   return productData ? (
-    <div className="border-t-2 pt-10 transition-opacity ease-in duration-500 opacity-100">
-      {/*----------- Product Data-------------- */}
-      <div className="flex gap-12 sm:gap-12 flex-col sm:flex-row">
-        {/*---------- Product Images------------- */}
-        <div className="flex-1 flex flex-col-reverse gap-3 sm:flex-row">
-          <div className="flex sm:flex-col overflow-x-auto sm:overflow-y-scroll justify-between sm:justify-normal sm:w-[18.7%] w-full">
-            {productData.image.map((item, index) => (
-              <img
-                onClick={() => setImage(item)}
-                src={item}
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      {/* Breadcrumb */}
+      <div className="flex items-center text-sm text-gray-500 mb-6">
+        <span>Home</span>
+        <ChevronRight size={16} className="mx-2" />
+        <span>{productData.category}</span>
+        <ChevronRight size={16} className="mx-2" />
+        <span>{productData.subCategory}</span>
+        <ChevronRight size={16} className="mx-2" />
+        <span className="text-gray-900">{productData.name}</span>
+      </div>
+
+      {/* Product Section */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 mb-16">
+        {/* Product Images */}
+        <div className="flex flex-col-reverse md:flex-row gap-4">
+          {/* Thumbnails */}
+          <div className="flex md:flex-col gap-2 overflow-x-auto md:overflow-y-auto md:w-24">
+            {productData.image.map((img, index) => (
+              <div
                 key={index}
-                className="w-[24%] sm:w-full sm:mb-3 flex-shrink-0 cursor-pointer"
-                alt=""
-              />
+                className={`border-2 rounded-md p-1 cursor-pointer transition-all ${
+                  selectedImage === img ? "border-blue-500" : "border-gray-200"
+                }`}
+                onClick={() => setSelectedImage(img)}
+              >
+                <img
+                  src={img}
+                  alt={`Thumbnail ${index + 1}`}
+                  className="w-16 h-16 object-cover rounded-md"
+                />
+              </div>
             ))}
           </div>
-          <div className="w-full sm:w-[80%] relative">
-            <div className="size-14 bg-white rounded-full drop-shadow-xl absolute right-3 top-3 flex items-center justify-center">
-              <Heart
-                className={`size-10 ${
-                  match && "fill-pink-600"
-                } text-pink-600 cursor-pointer`}
+
+          {/* Main Image */}
+          <div className="relative flex-1">
+            <div className="absolute top-4 right-4 z-10">
+              <button
                 onClick={() => toggleFavorite(productId)}
+                className={`p-3 rounded-full shadow-lg transition-all ${
+                  isFavorite ? "bg-pink-50" : "bg-white"
+                } hover:bg-pink-50`}
+              >
+                <Heart
+                  className={`w-6 h-6 ${
+                    isFavorite ? "fill-pink-500 text-pink-500" : "text-gray-600"
+                  }`}
+                />
+              </button>
+            </div>
+            
+            {discountPercentage > 0 && (
+              <div className="absolute top-4 left-4 bg-red-500 text-white px-3 py-1 rounded-full text-sm font-medium z-10">
+                -{discountPercentage}%
+              </div>
+            )}
+            
+            <div className="aspect-square overflow-hidden rounded-xl bg-gray-100">
+              <img
+                src={selectedImage}
+                alt={productData.name}
+                className="w-full h-full object-cover object-center"
               />
             </div>
-            <img className="w-full h-auto" src={image} alt="" />
           </div>
         </div>
 
-        {/* -------- Product Info ---------- */}
-        <div className="flex-1">
-          <h1 className="font-medium text-2xl mt-2">{productData.name}</h1>
-          <div className=" flex items-center gap-1 mt-2">
-            <img src={assets.star_icon} alt="" className="w-3 5" />
-            <img src={assets.star_icon} alt="" className="w-3 5" />
-            <img src={assets.star_icon} alt="" className="w-3 5" />
-            <img src={assets.star_icon} alt="" className="w-3 5" />
-            <img src={assets.star_dull_icon} alt="" className="w-3 5" />
-            <p className="pl-2">(122)</p>
-          </div>
-          <p className="mt-5 text-3xl font-medium">
-            {currency}
-            {productData.price}
-          </p>
-          <p className="mt-5 text-gray-500 md:w-4/5">
-            {productData.description}
-          </p>
-          <div className="flex flex-col gap-4 my-8">
-            <p>Select Size</p>
-            <div className="flex gap-2">
-              {productData.sizes.map((item, index) => (
-                <button
-                  onClick={() => setSize(item)}
-                  className={`border py-2 px-4 bg-gray-100 ${
-                    item === size ? "border-orange-500" : ""
-                  }`}
-                  key={index}
-                >
-                  {item}
-                </button>
-              ))}
+        {/* Product Info */}
+        <div className="space-y-6">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">{productData.name}</h1>
+            <div className="flex items-center gap-2 mt-2">
+              <div className="flex items-center">
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <Star
+                    key={star}
+                    size={16}
+                    className={`${
+                      star <= 4 ? "fill-yellow-400 text-yellow-400" : "text-gray-300"
+                    }`}
+                  />
+                ))}
+              </div>
+              <span className="text-sm text-gray-500">(122 reviews)</span>
+              {productData.bestseller && (
+                <span className="ml-3 px-2 py-1 bg-yellow-100 text-yellow-800 text-xs font-medium rounded-full">
+                  Bestseller
+                </span>
+              )}
             </div>
           </div>
-          <button
-            onClick={() => addToCart(productData._id, size)}
-            className="bg-black text-white px-8 py-3 text-sm active:bg-gray-700"
-          >
-            ADD TO CART
-          </button>
-          <hr className="mt-8 sm:w-4/5" />
-          <div className="text-sm text-gray-500 mt-5 flex flex-col gap-1">
-            <p>100% Original product.</p>
-            <p>Cash on delivery is available on this product.</p>
-            <p>Easy return and exchange policy within 7 days.</p>
+
+          {/* Pricing */}
+          <div className="flex items-center gap-3">
+            <p className="text-3xl font-bold text-gray-900">
+              {currency}
+              {productData.price.toFixed(2)}
+            </p>
+            {productData.originalPrice && (
+              <>
+                <p className="text-xl text-gray-500 line-through">
+                  {currency}
+                  {productData.originalPrice.toFixed(2)}
+                </p>
+                <span className="text-red-600 font-medium">{discountPercentage}% off</span>
+              </>
+            )}
+          </div>
+
+          {/* Short Description */}
+          <p className="text-gray-600 leading-relaxed">{productData.description}</p>
+
+          {/* Color Selection */}
+          {productData.colors && productData.colors.length > 0 && (
+            <div className="space-y-3">
+              <p className="font-medium text-gray-900">Color: {selectedColor}</p>
+              <div className="flex gap-2">
+                {productData.colors.map((color) => (
+                  <button
+                    key={color}
+                    onClick={() => setSelectedColor(color)}
+                    className={`w-10 h-10 rounded-full border-2 transition-all ${
+                      selectedColor === color ? "border-gray-900 ring-2 ring-offset-2 ring-gray-300" : "border-gray-200"
+                    }`}
+                    style={{ backgroundColor: color }}
+                    title={color}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Size Selection */}
+          {productData.sizes && productData.sizes.length > 0 && (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <p className="font-medium text-gray-900">Select Size</p>
+                <button className="text-sm text-blue-600 hover:text-blue-800 flex items-center gap-1">
+                  <Info size={14} />
+                  Size Guide
+                </button>
+              </div>
+              <div className="grid grid-cols-4 gap-2">
+                {productData.sizes.map((size) => (
+                  <button
+                    key={size}
+                    onClick={() => setSelectedSize(size)}
+                    className={`py-3 px-4 border rounded-md text-center transition-all ${
+                      selectedSize === size
+                        ? "border-blue-500 bg-blue-50 text-blue-700 font-medium"
+                        : "border-gray-300 text-gray-700 hover:border-gray-400"
+                    }`}
+                  >
+                    {size}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Quantity Selector */}
+          <div className="space-y-3">
+            <p className="font-medium text-gray-900">Quantity</p>
+            <div className="flex items-center gap-3">
+              <div className="flex items-center border border-gray-300 rounded-lg">
+                <button
+                  onClick={decrementQuantity}
+                  className="px-3 py-2 text-gray-600 hover:text-gray-900 disabled:opacity-50"
+                  disabled={quantity <= 1}
+                >
+                  -
+                </button>
+                <span className="px-4 py-2 border-x border-gray-300">{quantity}</span>
+                <button
+                  onClick={incrementQuantity}
+                  className="px-3 py-2 text-gray-600 hover:text-gray-900 disabled:opacity-50"
+                  disabled={quantity >= (productData.stockQuantity || 10)}
+                >
+                  +
+                </button>
+              </div>
+              <span className="text-sm text-gray-500">
+                {productData.stockQuantity || 10} available
+              </span>
+            </div>
+          </div>
+
+          {/* Action Buttons */}
+          <div className="flex gap-4 pt-4">
+            <button
+              onClick={handleAddToCart}
+              className="flex-1 bg-blue-600 text-white py-3 px-6 rounded-lg font-medium hover:bg-blue-700 transition-colors shadow-md"
+            >
+              Add to Cart
+            </button>
+            <button className="px-6 py-3 border border-gray-300 rounded-lg font-medium hover:bg-gray-50 transition-colors">
+              Buy Now
+            </button>
+          </div>
+
+          {/* Shipping & Returns Info */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-6 border-t border-gray-200">
+            <div className="flex items-center gap-3">
+              <Truck size={20} className="text-gray-600" />
+              <div>
+                <p className="font-medium text-sm">Free Shipping</p>
+                <p className="text-xs text-gray-500">On orders over $50</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <RotateCcw size={20} className="text-gray-600" />
+              <div>
+                <p className="font-medium text-sm">Easy Returns</p>
+                <p className="text-xs text-gray-500">30 days return policy</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <Shield size={20} className="text-gray-600" />
+              <div>
+                <p className="font-medium text-sm">Secure Payment</p>
+                <p className="text-xs text-gray-500">100% protected</p>
+              </div>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* ---------- Description & Review Section ------------- */}
+      {/* Product Details Tabs */}
+      <div className="border-b border-gray-200 mb-8">
+        <nav className="-mb-px flex space-x-8">
+          {[
+            { id: "description", label: "Description" },
+            { id: "details", label: "Product Details" },
+            { id: "reviews", label: `Reviews (122)` },
+            { id: "shipping", label: "Shipping & Returns" },
+          ].map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`py-4 px-1 border-b-2 font-medium text-sm whitespace-nowrap ${
+                activeTab === tab.id
+                  ? "border-blue-500 text-blue-600"
+                  : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </nav>
+      </div>
 
-      <div className="mt-20">
-        <div className="flex">
-          <p
-            className={`border px-5 py-3 text-sm cursor-pointer ${
-              descTrue === true && "font-semibold"
-            } `}
-            onClick={() => setDescTrue(true)}
-          >
-            Description
-          </p>
-          <p
-            className={`border px-5 py-3 text-sm cursor-pointer ${
-              descTrue === false && "font-semibold"
-            } `}
-            onClick={() => setDescTrue(false)}
-          >
-            Reviews (122)
-          </p>
-        </div>
-        {descTrue && (
-          <div className="flex flex-col gap-4 border px-6 py-6 text-sm text-gray-500">
-            <p>
-              An e-commerce website is an online platform that facilitates the
-              buying and selling of products or services over the internet. It
-              serves as a virtual marketplace where businesses and individuals
-              can showcase their products, interact with customers, and conduct
-              transactions without the need for a physical presence. E-commerce
-              websites have gained immense popularity due to their convenience,
-              accessibility, and the global reach they offer.
+      {/* Tab Content */}
+      <div className="mb-16">
+        {activeTab === "description" && (
+          <div className="prose prose-lg max-w-none">
+            <h3 className="text-xl font-semibold mb-4">Product Description</h3>
+            <p className="text-gray-600 leading-relaxed mb-6">
+              {productData.longDescription || productData.description}
             </p>
-            <p>
-              E-commerce websites typically display products or services along
-              with detailed descriptions, images, prices, and any available
-              variations (e.g., sizes, colors). Each product usually has its own
-              dedicated page with relevant information.
-            </p>
+            
+            {productData.fabric && (
+              <div className="mb-4">
+                <h4 className="font-medium text-gray-900">Fabric & Material</h4>
+                <p className="text-gray-600">{productData.fabric}</p>
+              </div>
+            )}
+            
+            {productData.careInstructions && (
+              <div>
+                <h4 className="font-medium text-gray-900">Care Instructions</h4>
+                <p className="text-gray-600">{productData.careInstructions}</p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {activeTab === "details" && (
+          <div className="space-y-4">
+            <h3 className="text-xl font-semibold mb-4">Product Details</h3>
+            {productData.productDetails && productData.productDetails.length > 0 ? (
+              <ul className="space-y-2">
+                {productData.productDetails.map((detail, index) => (
+                  <li key={index} className="flex items-start">
+                    <Check size={16} className="text-green-500 mt-1 mr-2 flex-shrink-0" />
+                    <span className="text-gray-600">{detail}</span>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-gray-500">No product details available.</p>
+            )}
+          </div>
+        )}
+
+        {activeTab === "reviews" && (
+          <Review productId={productId} />
+        )}
+
+        {activeTab === "shipping" && (
+          <div className="space-y-6">
+            <h3 className="text-xl font-semibold">Shipping & Returns</h3>
+            <div className="grid md:grid-cols-2 gap-8">
+              <div>
+                <h4 className="font-medium text-gray-900 mb-3">Shipping Information</h4>
+                <ul className="space-y-2 text-gray-600">
+                  <li>• Free standard shipping on orders over $50</li>
+                  <li>• Express shipping available at additional cost</li>
+                  <li>• Usually ships within 1-2 business days</li>
+                  <li>• International shipping available</li>
+                </ul>
+              </div>
+              <div>
+                <h4 className="font-medium text-gray-900 mb-3">Return Policy</h4>
+                <ul className="space-y-2 text-gray-600">
+                  <li>• Easy 30-day return policy</li>
+                  <li>• Items must be unworn and in original condition</li>
+                  <li>• Free returns for defective items</li>
+                  <li>• Return shipping label provided</li>
+                </ul>
+              </div>
+            </div>
           </div>
         )}
       </div>
 
-      {/* Review */}
-      {!descTrue && <Review />}
-
-      {/* --------- display related products ---------- */}
-
+      {/* Related Products */}
       <RelatedProducts
         category={productData.category}
         subCategory={productData.subCategory}
+        currentProductId={productId}
       />
     </div>
   ) : (
-    <div className=" opacity-0"></div>
+    <div className="flex justify-center items-center min-h-96">
+      <div className="animate-pulse text-gray-500">Loading product...</div>
+    </div>
   );
 };
 

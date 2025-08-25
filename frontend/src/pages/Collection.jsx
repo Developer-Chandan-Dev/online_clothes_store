@@ -46,7 +46,7 @@ const Collection = () => {
   // Apply filters and sorting
   useEffect(() => {
     setIsLoading(true);
-    
+
     // Simulate loading delay for better UX
     const timer = setTimeout(() => {
       let result = [...products];
@@ -67,7 +67,9 @@ const Collection = () => {
 
       // Apply subcategory filter
       if (subCategory.length > 0) {
-        result = result.filter((item) => subCategory.includes(item.subCategory));
+        result = result.filter((item) =>
+          subCategory.includes(item.subCategory)
+        );
       }
 
       // Apply price range filter
@@ -239,8 +241,12 @@ const Collection = () => {
             <p className="mb-3 text-sm font-medium">PRICE RANGE</p>
             <div className="pr-5">
               <div className="flex justify-between text-xs text-gray-500 mb-2">
-                <span>{currency} {priceRange[0]}</span>
-                <span>{currency} {priceRange[1]}</span>
+                <span>
+                  {currency} {priceRange[0]}
+                </span>
+                <span>
+                  {currency} {priceRange[1]}
+                </span>
               </div>
               <div className="flex gap-2">
                 <input
@@ -322,10 +328,15 @@ const Collection = () => {
               {currentProducts.map((item) => (
                 <ProductItem
                   key={item._id}
-                  name={item.name}
                   id={item._id}
-                  price={item.price}
+                  name={item.name}
                   image={item.image}
+                  price={item.price}
+                  originalPrice={item.originalPrice}
+                  category={item.category}
+                  bestseller={item.bestseller}
+                  colors={item.colors}
+                  sizes={item.sizes}
                 />
               ))}
             </div>

@@ -4,8 +4,7 @@ import ProductItem from "../components/ProductItem";
 import { FavsContext } from "../context/FavsContext";
 
 const Favorites = () => {
-
-  const { favs } = useContext(FavsContext)
+  const { favs } = useContext(FavsContext);
 
   return (
     <div className="border-t pt-14">
@@ -20,9 +19,14 @@ const Favorites = () => {
             <ProductItem
               key={index}
               id={item._id}
-              image={item.image}
               name={item.name}
+              image={item.image}
               price={item.price}
+              originalPrice={item.originalPrice}
+              category={item.category}
+              bestseller={item.bestseller}
+              colors={item.colors}
+              sizes={item.sizes}
             />
           ))}
       </div>

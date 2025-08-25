@@ -4,8 +4,8 @@ import {authUser} from "../middleware/auth.js";
 
 import { addReview, getProductReviews, deleteReview, updateReview } from "../controllers/reviewController.js";
 
-router.post("/", addReview);
-// router.post("/", authUser, addReview);
+// router.post("/", addReview);
+router.post("/", authUser, addReview);
 
 router.get("/:productId", getProductReviews);
 

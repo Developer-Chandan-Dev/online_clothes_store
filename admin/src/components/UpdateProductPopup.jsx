@@ -1,54 +1,131 @@
 /* eslint-disable react/prop-types */
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { backendUrl } from '../App';
 import { toast } from 'react-toastify';
 import { assets } from '../assets/assets';
 
 const UpdateProductPopup = ({ token, product, onClose, onUpdate }) => {
+  const [loading, setLoading] = useState(false);
   const [image1, setImage1] = useState(null);
   const [image2, setImage2] = useState(null);
   const [image3, setImage3] = useState(null);
   const [image4, setImage4] = useState(null);
 
-  const [name, setName] = useState(product?.name || '');
-  const [description, setDescription] = useState(product?.description || '');
-  const [price, setPrice] = useState(product?.price || '');
-  const [category, setCategory] = useState(product?.category || 'Men');
-  const [subCategory, setSubCategory] = useState(product?.subCategory || 'Topwear');
-  const [bestseller, setBestseller] = useState(product?.bestseller || false);
-  const [sizes, setSizes] = useState(product?.sizes || []);
+  const [name, setName] = useState('');
+  const [description, setDescription] = useState('');
+  const [longDescription, setLongDescription] = useState('');
+  const [productDetails, setProductDetails] = useState(['']);
+  const [price, setPrice] = useState('');
+  const [originalPrice, setOriginalPrice] = useState('');
+  const [category, setCategory] = useState('Men');
+  const [subCategory, setSubCategory] = useState('Topwear');
+  const [bestseller, setBestseller] = useState(false);
+  const [sizes, setSizes] = useState([]);
+  const [colors, setColors] = useState([]);
+  const [fabric, setFabric] = useState('');
+  const [careInstructions, setCareInstructions] = useState('');
+  const [sku, setSku] = useState('');
+  const [stockQuantity, setStockQuantity] = useState(0);
 
-  const productId = product?._id;
+  // Available color options
+  const colorOptions = [
+    { name: "Black", value: "black", hex: "#000000" },
+    { name: "White", value: "white", hex: "#FFFFFF" },
+    { name: "Red", value: "red", hex: "#FF0000" },
+    { name: "Blue", value: "blue", hex: "#0000FF" },
+    { name: "Green", value: "green", hex: "#008000" },
+    { name: "Gray", value: "gray", hex: "#808080" },
+    { name: "Navy", value: "navy", hex: "#000080" },
+    { name: "Pink", value: "pink", hex: "#FFC0CB" },
+    { name: "Yellow", value: "yellow", hex: "#FFFF00" },
+    { name: "Brown", value: "brown", hex: "#A52A2A" },
+  ];
 
-//   const handleImagePreview = (index) => {
-//     return (
-//       product.image?.[index] && ![image1, image2, image3, image4][index]
-//         ? product.image[index]
-//         : URL.createObjectURL([image1, image2, image3, image4][index])
-//     );
-//   };
+  // Initialize form with product data
+  useEffect(() => {
+    if (product) {
+      setName(product.name || '');
+      setDescription(product.description || '');
+      setLongDescription(product.longDescription || '');
+      setProductDetails(
+        product.productDetails && product.productDetails.length > 0 
+          ? product.productDetails 
+          : ['']
+      );
+      setPrice(product.price || '');
+      setOriginalPrice(product.originalPrice || '');
+      setCategory(product.category || 'Men');
+      setSubCategory(product.subCategory || 'Topwear');
+      setBestseller(product.bestseller || false);
+      setSizes(product.sizes || []);
+      setColors(product.colors || []);
+      setFabric(product.fabric || '');
+      setCareInstructions(product.careInstructions || '');
+      setSku(product.sku || '');
+      setStockQuantity(product.stockQuantity || 0);
+    }
+  }, [product]);
+
+  const toggleColor = (colorValue) => {
+    setColors(prev => 
+      prev.includes(colorValue) 
+        ? prev.filter(c => c !== colorValue) 
+        : [...prev, colorValue]
+    );
+  };
+
+  // Function to handle product details input
+  const handleDetailChange = (index, value) => {
+    const updatedDetails = [...productDetails];
+    updatedDetails[index] = value;
+    setProductDetails(updatedDetails);
+  };
+
+  // Function to add a new detail field
+  const addDetailField = () => {
+    setProductDetails([...productDetails, '']);
+  };
+
+  // Function to remove a detail field
+  const removeDetailField = (index) => {
+    if (productDetails.length > 1) {
+      const updatedDetails = [...productDetails];
+      updatedDetails.splice(index, 1);
+      setProductDetails(updatedDetails);
+    }
+  };
 
   const onSubmitHandler = async (e) => {
     e.preventDefault();
-
+    setLoading(true);
+    
     try {
       const formData = new FormData();
-      formData.append('name', name);
-      formData.append('description', description);
-      formData.append('price', price);
-      formData.append('category', category);
-      formData.append('subCategory', subCategory);
-      formData.append('bestseller', bestseller);
-      formData.append('sizes', JSON.stringify(sizes));
 
-      image1 && formData.append('image1', image1);
-      image2 && formData.append('image2', image2);
-      image3 && formData.append('image3', image3);
-      image4 && formData.append('image4', image4);
+      formData.append("name", name);
+      formData.append("description", description);
+      formData.append("longDescription", longDescription);
+      formData.append("productDetails", JSON.stringify(productDetails.filter(detail => detail.trim() !== '')));
+      formData.append("price", price);
+      formData.append("originalPrice", originalPrice);
+      formData.append("category", category);
+      formData.append("subCategory", subCategory);
+      formData.append("bestseller", bestseller);
+      formData.append("sizes", JSON.stringify(sizes));
+      formData.append("colors", JSON.stringify(colors));
+      formData.append("fabric", fabric);
+      formData.append("careInstructions", careInstructions);
+      formData.append("sku", sku);
+      formData.append("stockQuantity", stockQuantity);
+
+      image1 && formData.append("image1", image1);
+      image2 && formData.append("image2", image2);
+      image3 && formData.append("image3", image3);
+      image4 && formData.append("image4", image4);
 
       const response = await axios.put(
-        `${backendUrl}/api/product/update/${productId}`,
+        `${backendUrl}/api/product/update/${product._id}`,
         formData,
         { headers: { token } }
       );
@@ -63,100 +140,309 @@ const UpdateProductPopup = ({ token, product, onClose, onUpdate }) => {
     } catch (error) {
       console.log(error);
       toast.error(error.message);
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <div className="fixed top-0 left-0 w-full h-full bg-black bg-opacity-50 flex justify-center items-center z-50">
-      <form onSubmit={onSubmitHandler} className="bg-white p-6 rounded-lg max-w-lg w-full overflow-y-auto max-h-[90vh]">
-        <h2 className="text-xl mb-4 font-semibold">Update Product</h2>
-
-        {/* Image Upload */}
-        <div className="mb-4">
-          <p className="mb-2">Update Images</p>
-          <div className="flex gap-2">
-            {[image1, image2, image3, image4].map((img, index) => (
-              <label key={index} htmlFor={`image${index + 1}`}>
-                <img
-                  className="w-20 h-20 object-cover"
-                  src={
-                    img
-                      ? URL.createObjectURL(img)
-                      : product.image?.[index]
-                      ? product.image[index]
-                      : assets.upload_area
-                  }
-                  alt=""
-                />
+    <div className="fixed top-0 left-0 w-full h-full bg-black bg-opacity-50 flex justify-center items-center z-50 overflow-y-auto py-8">
+      <form
+        onSubmit={onSubmitHandler}
+        className="flex flex-col w-full h-[90vh] overflow-y-auto items-start gap-4 p-6 bg-white rounded-lg shadow-sm max-w-4xl mx-auto my-8"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex justify-between items-center w-full">
+          <h2 className="text-2xl font-bold text-gray-800">Update Product</h2>
+          <button 
+            type="button" 
+            onClick={onClose}
+            className="text-gray-500 hover:text-gray-700 text-xl"
+          >
+            ×
+          </button>
+        </div>
+        
+        <div className="w-full">
+          <p className="mb-2 font-medium">Update Images</p>
+          <div className="flex gap-2 flex-wrap">
+            {[1, 2, 3, 4].map((num) => (
+              <label key={num} htmlFor={`updateImage${num}`} className="cursor-pointer">
+                <div className="w-20 h-20 border-2 border-dashed border-gray-300 rounded flex items-center justify-center overflow-hidden">
+                  <img
+                    className="w-full h-full object-cover"
+                    src={
+                      !eval(`image${num}`) 
+                        ? (product.image && product.image[num-1] ? product.image[num-1] : assets.upload_area)
+                        : URL.createObjectURL(eval(`image${num}`))
+                    }
+                    alt={`Preview ${num}`}
+                  />
+                </div>
                 <input
+                  onChange={(e) => eval(`setImage${num}(e.target.files[0])`)}
                   type="file"
-                  id={`image${index + 1}`}
+                  id={`updateImage${num}`}
                   hidden
-                  onChange={(e) => {
-                    const setImage = [setImage1, setImage2, setImage3, setImage4][index];
-                    setImage(e.target.files[0]);
-                  }}
+                  accept="image/*"
                 />
               </label>
             ))}
           </div>
         </div>
 
-        {/* Inputs */}
-        <input value={name} onChange={(e) => setName(e.target.value)} className="w-full mb-3 p-2 border" type="text" placeholder="Product Name" required />
-        <textarea value={description} onChange={(e) => setDescription(e.target.value)} className="w-full mb-3 p-2 border" placeholder="Description" required />
-        
-        <div className="flex gap-3 mb-3">
-          <select value={category} onChange={(e) => setCategory(e.target.value)} className="p-2 border">
-            <option value="Men">Men</option>
-            <option value="Women">Women</option>
-            <option value="Kids">Kids</option>
-          </select>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full">
+          <div>
+            <label className="block mb-2 font-medium">Product name</label>
+            <input
+              onChange={(e) => setName(e.target.value)}
+              value={name}
+              className="w-full px-3 py-2 border border-gray-300 rounded"
+              type="text"
+              placeholder="e.g., Classic Cotton T-Shirt"
+              required
+            />
+          </div>
 
-          <select value={subCategory} onChange={(e) => setSubCategory(e.target.value)} className="p-2 border">
-            <option value="Topwear">Topwear</option>
-            <option value="Bottomwear">Bottomwear</option>
-            <option value="Winterwear">Winterwear</option>
-            <option value="Fullwear">Fullwear</option>
-          </select>
-
-          <input value={price} onChange={(e) => setPrice(e.target.value)} className="p-2 border w-24" type="number" placeholder="Price" />
+          <div>
+            <label className="block mb-2 font-medium">SKU (Stock Keeping Unit)</label>
+            <input
+              onChange={(e) => setSku(e.target.value)}
+              value={sku}
+              className="w-full px-3 py-2 border border-gray-300 rounded"
+              type="text"
+              placeholder="e.g., M-TS-BLK-01"
+            />
+          </div>
         </div>
 
-        {/* Sizes */}
-        <div className="mb-3">
-          <p className="mb-1">Sizes</p>
-          <div className="flex gap-2">
+        <div className="w-full">
+          <label className="block mb-2 font-medium">Short Description</label>
+          <textarea
+            onChange={(e) => setDescription(e.target.value)}
+            value={description}
+            className="w-full px-3 py-2 border border-gray-300 rounded"
+            rows="2"
+            placeholder="Brief product description for product cards..."
+            required
+          />
+        </div>
+
+        <div className="w-full">
+          <label className="block mb-2 font-medium">Long Description</label>
+          <textarea
+            onChange={(e) => setLongDescription(e.target.value)}
+            value={longDescription}
+            className="w-full px-3 py-2 border border-gray-300 rounded"
+            rows="4"
+            placeholder="Detailed product description for the product page..."
+          />
+        </div>
+
+        <div className="w-full">
+          <label className="block mb-2 font-medium">Product Details</label>
+          <p className="text-sm text-gray-500 mb-2">Each entry will be displayed as a list item on the product page</p>
+          <div className="space-y-2">
+            {productDetails.map((detail, index) => (
+              <div key={index} className="flex items-center gap-2">
+                <span className="text-gray-500">{index + 1}.</span>
+                <input
+                  type="text"
+                  value={detail}
+                  onChange={(e) => handleDetailChange(index, e.target.value)}
+                  className="flex-1 px-3 py-2 border border-gray-300 rounded"
+                  placeholder="e.g., 100% cotton fabric"
+                />
+                {productDetails.length > 1 && (
+                  <button
+                    type="button"
+                    onClick={() => removeDetailField(index)}
+                    className="px-3 py-2 bg-red-100 text-red-700 rounded hover:bg-red-200"
+                  >
+                    Remove
+                  </button>
+                )}
+              </div>
+            ))}
+            <button
+              type="button"
+              onClick={addDetailField}
+              className="mt-2 px-4 py-2 bg-blue-100 text-blue-700 rounded hover:bg-blue-200"
+            >
+              + Add Another Detail
+            </button>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 w-full">
+          <div>
+            <label className="block mb-2 font-medium">Product category</label>
+            <select
+              onChange={(e) => setCategory(e.target.value)}
+              value={category}
+              className="w-full px-3 py-2 border border-gray-300 rounded"
+            >
+              <option value="Men">Men</option>
+              <option value="Women">Women</option>
+              <option value="Kids">Kids</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block mb-2 font-medium">Sub category</label>
+            <select
+              onChange={(e) => setSubCategory(e.target.value)}
+              value={subCategory}
+              className="w-full px-3 py-2 border border-gray-300 rounded"
+            >
+              <option value="Topwear">Topwear</option>
+              <option value="Bottomwear">Bottomwear</option>
+              <option value="Winterwear">Winterwear</option>
+              <option value="Fullwear">Fullwear</option>
+              <option value="Accessories">Accessories</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block mb-2 font-medium">Current Price ($)</label>
+            <input
+              onChange={(e) => setPrice(e.target.value)}
+              value={price}
+              className="w-full px-3 py-2 border border-gray-300 rounded"
+              type="number"
+              min="0"
+              step="0.01"
+              placeholder="25.00"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="block mb-2 font-medium">Original Price ($)</label>
+            <input
+              onChange={(e) => setOriginalPrice(e.target.value)}
+              value={originalPrice}
+              className="w-full px-3 py-2 border border-gray-300 rounded"
+              type="number"
+              min="0"
+              step="0.01"
+              placeholder="35.00"
+            />
+          </div>
+        </div>
+
+        <div className="w-full">
+          <label className="block mb-2 font-medium">Available Sizes</label>
+          <div className="flex gap-2 flex-wrap">
             {["S", "M", "L", "XL", "XXL"].map((size) => (
               <div
                 key={size}
                 onClick={() =>
                   setSizes((prev) =>
                     prev.includes(size)
-                      ? prev.filter((s) => s !== size)
+                      ? prev.filter((item) => item !== size)
                       : [...prev, size]
                   )
                 }
-                className={`cursor-pointer px-3 py-1 rounded ${
-                  sizes.includes(size) ? "bg-pink-100" : "bg-gray-200"
-                }`}
+                className="cursor-pointer"
               >
-                {size}
+                <p
+                  className={`px-4 py-2 rounded ${
+                    sizes.includes(size)
+                      ? "bg-pink-100 border border-pink-300"
+                      : "bg-gray-100 border border-gray-200"
+                  }`}
+                >
+                  {size}
+                </p>
               </div>
             ))}
           </div>
         </div>
 
-        {/* Bestseller */}
-        <div className="flex items-center mb-4">
-          <input type="checkbox" id="bestseller" checked={bestseller} onChange={() => setBestseller((prev) => !prev)} />
-          <label htmlFor="bestseller" className="ml-2 cursor-pointer">Add to Bestseller</label>
+        <div className="w-full">
+          <label className="block mb-2 font-medium">Available Colors</label>
+          <div className="flex gap-2 flex-wrap">
+            {colorOptions.map((color) => (
+              <div
+                key={color.value}
+                onClick={() => toggleColor(color.value)}
+                className="cursor-pointer"
+              >
+                <div 
+                  className={`w-10 h-10 rounded-full border-2 ${colors.includes(color.value) ? 'border-black' : 'border-gray-300'}`}
+                  style={{ backgroundColor: color.hex }}
+                  title={color.name}
+                ></div>
+              </div>
+            ))}
+          </div>
         </div>
 
-        {/* Buttons */}
-        <div className="flex justify-between">
-          <button type="button" onClick={onClose} className="px-4 py-2 border rounded text-gray-600">Cancel</button>
-          <button type="submit" className="px-4 py-2 bg-black text-white rounded">Update</button>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full">
+          <div>
+            <label className="block mb-2 font-medium">Fabric/Material</label>
+            <input
+              onChange={(e) => setFabric(e.target.value)}
+              value={fabric}
+              className="w-full px-3 py-2 border border-gray-300 rounded"
+              type="text"
+              placeholder="e.g., 100% Cotton"
+            />
+          </div>
+
+          <div>
+            <label className="block mb-2 font-medium">Stock Quantity</label>
+            <input
+              onChange={(e) => setStockQuantity(e.target.value)}
+              value={stockQuantity}
+              className="w-full px-3 py-2 border border-gray-300 rounded"
+              type="number"
+              min="0"
+              placeholder="50"
+            />
+          </div>
+        </div>
+
+        <div className="w-full">
+          <label className="block mb-2 font-medium">Care Instructions</label>
+          <textarea
+            onChange={(e) => setCareInstructions(e.target.value)}
+            value={careInstructions}
+            className="w-full px-3 py-2 border border-gray-300 rounded"
+            rows="2"
+            placeholder="e.g., Machine wash cold, tumble dry low"
+          />
+        </div>
+
+        <div className="flex items-center gap-2 mt-2">
+          <input
+            onChange={() => setBestseller((prev) => !prev)}
+            checked={bestseller}
+            type="checkbox"
+            id="updateBestseller"
+            className="w-4 h-4"
+          />
+          <label className="cursor-pointer font-medium" htmlFor="updateBestseller">
+            Mark as Bestseller
+          </label>
+        </div>
+
+        <div className="flex justify-between w-full mt-4">
+          <button 
+            type="button" 
+            onClick={onClose}
+            className="px-6 py-3 border border-gray-300 rounded text-gray-600 hover:bg-gray-100 font-medium"
+          >
+            Cancel
+          </button>
+          <button 
+            type="submit" 
+            disabled={loading}
+            className="px-6 py-3 bg-black text-white rounded hover:bg-gray-800 transition disabled:opacity-50 font-medium"
+          >
+            {loading ? "Updating Product..." : "UPDATE PRODUCT"}
+          </button>
         </div>
       </form>
     </div>

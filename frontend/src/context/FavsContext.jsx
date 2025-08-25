@@ -5,6 +5,7 @@ import axios from "axios";
 import { createContext, useContext, useEffect, useState } from "react";
 import { toast } from "react-toastify";
 import { ShopContext } from "./ShopContext";
+import { useNavigate } from "react-router-dom";
 
 export const FavsContext = createContext();
 
@@ -13,7 +14,10 @@ const FavsContextProvider = (props) => {
   const [favIds, setFavIds] = useState([]);
   const [favsCount, setFavsCount] = useState(0);
 
-  const { backendUrl, token } = useContext(ShopContext);
+  const navigate = useNavigate();
+
+  const { backendUrl, token, setToken,
+      setCartItems, } = useContext(ShopContext);
 
   const getFavoritesProducts = async (token) => {
     try {
@@ -28,7 +32,17 @@ const FavsContextProvider = (props) => {
       }
     } catch (error) {
       console.log(error);
-      toast.error(error.message);
+      if (error.isAxiosError) {
+        toast.error(error?.response?.data?.message)
+        // if(error?.response?.data?.message === "User not found"){
+        //       navigate("/login");
+        //       localStorage.removeItem("token");
+        //       setToken("");
+        //       setCartItems({});
+        // }
+      }else{
+        toast.error(error.message);
+      }
     }
   };
 

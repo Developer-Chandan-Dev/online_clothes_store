@@ -134,7 +134,17 @@ const ShopContextProvider = (props) => {
       }
     } catch (error) {
       console.log(error);
-      toast.error(error.message);
+      if (error.isAxiosError) {
+        toast.error(error?.response?.data?.message);
+        if (error?.response?.data?.message === "User not found") {
+          navigate("/login");
+          localStorage.removeItem("token");
+          setToken("");
+          setCartItems({});
+        }
+      } else {
+        toast.error(error.message);
+      }
     }
   };
 

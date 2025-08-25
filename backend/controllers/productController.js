@@ -4,8 +4,23 @@ import productModel from "../models/productModel.js"
 // function for add product
 const addProduct = async (req, res) => {
     try {
-
-        const { name, description, price, category, subCategory, sizes, bestseller } = req.body
+        const { 
+            name, 
+            description, 
+            longDescription,
+            productDetails,
+            price, 
+            originalPrice,
+            category, 
+            subCategory, 
+            sizes, 
+            colors,
+            fabric,
+            careInstructions,
+            sku,
+            stockQuantity,
+            bestseller 
+        } = req.body
 
         const image1 = req.files.image1 && req.files.image1[0]
         const image2 = req.files.image2 && req.files.image2[0]
@@ -21,19 +36,32 @@ const addProduct = async (req, res) => {
             })
         )
 
+        // Parse JSON strings if needed
+        const parsedSizes = sizes ? JSON.parse(sizes) : [];
+        const parsedColors = colors ? JSON.parse(colors) : [];
+        const parsedProductDetails = productDetails ? JSON.parse(productDetails) : [];
+
         const productData = {
             name,
             description,
+            longDescription: longDescription || "",
+            productDetails: parsedProductDetails,
             category,
             price: Number(price),
+            originalPrice: originalPrice ? Number(originalPrice) : undefined,
             subCategory,
             bestseller: bestseller === "true" ? true : false,
-            sizes: JSON.parse(sizes),
+            sizes: parsedSizes,
+            colors: parsedColors,
+            fabric: fabric || "",
+            careInstructions: careInstructions || "",
+            sku: sku || undefined,
+            stockQuantity: stockQuantity ? Number(stockQuantity) : 0,
             image: imagesUrl,
             date: Date.now()
         }
 
-        console.log(productData);
+        console.log("Adding product:", productData);
 
         const product = new productModel(productData);
         await product.save()
@@ -49,7 +77,6 @@ const addProduct = async (req, res) => {
 // function for list product
 const listProducts = async (req, res) => {
     try {
-
         const products = await productModel.find({});
         res.json({ success: true, products })
 
@@ -62,7 +89,6 @@ const listProducts = async (req, res) => {
 // function for removing product
 const removeProduct = async (req, res) => {
     try {
-
         await productModel.findByIdAndDelete(req.body.id)
         res.json({ success: true, message: "Product Removed" })
 
@@ -75,7 +101,6 @@ const removeProduct = async (req, res) => {
 // function for single product info
 const singleProduct = async (req, res) => {
     try {
-
         const { productId } = req.body
         const product = await productModel.findById(productId)
         res.json({ success: true, product })
@@ -93,10 +118,18 @@ const updateProduct = async (req, res) => {
         const {
             name,
             description,
+            longDescription,
+            productDetails,
             price,
+            originalPrice,
             category,
             subCategory,
             sizes,
+            colors,
+            fabric,
+            careInstructions,
+            sku,
+            stockQuantity,
             bestseller
         } = req.body;
 
@@ -105,8 +138,10 @@ const updateProduct = async (req, res) => {
             return res.status(404).json({ success: false, message: "Product not found" });
         }
 
-        // Parse sizes if provided
-        let parsedSizes = sizes ? JSON.parse(sizes) : product.sizes;
+        // Parse JSON strings if provided
+        const parsedSizes = sizes ? JSON.parse(sizes) : product.sizes;
+        const parsedColors = colors ? JSON.parse(colors) : product.colors;
+        const parsedProductDetails = productDetails ? JSON.parse(productDetails) : product.productDetails;
 
         // Existing images
         let updatedImages = [...product.image];
@@ -117,31 +152,39 @@ const updateProduct = async (req, res) => {
             return result.secure_url;
         };
 
-        // Check each image field
-        if (req.files.image1 && req.files.image1[0]) {
+        // Check each image field and update if provided
+        if (req.files && req.files.image1 && req.files.image1[0]) {
             updatedImages[0] = await uploadImage(req.files.image1[0]);
         }
-        if (req.files.image2 && req.files.image2[0]) {
-            updatedImages[1] = await uploadImage(req.files.image2[0]);
+        if (req.files && req.files.image2 && req.files.image2[0]) {
+            updatedImages[1] = updatedImages[1] ? await uploadImage(req.files.image2[0]) : await uploadImage(req.files.image2[0]);
         }
-        if (req.files.image3 && req.files.image3[0]) {
-            updatedImages[2] = await uploadImage(req.files.image3[0]);
+        if (req.files && req.files.image3 && req.files.image3[0]) {
+            updatedImages[2] = updatedImages[2] ? await uploadImage(req.files.image3[0]) : await uploadImage(req.files.image3[0]);
         }
-        if (req.files.image4 && req.files.image4[0]) {
-            updatedImages[3] = await uploadImage(req.files.image4[0]);
+        if (req.files && req.files.image4 && req.files.image4[0]) {
+            updatedImages[3] = updatedImages[3] ? await uploadImage(req.files.image4[0]) : await uploadImage(req.files.image4[0]);
         }
 
-        // Filter out any undefined/null slots (optional)
+        // Filter out any undefined/null slots
         updatedImages = updatedImages.filter(Boolean);
 
-        // Update fields
+        // Update all fields
         product.name = name || product.name;
         product.description = description || product.description;
+        product.longDescription = longDescription !== undefined ? longDescription : product.longDescription;
+        product.productDetails = parsedProductDetails;
         product.price = price ? Number(price) : product.price;
+        product.originalPrice = originalPrice !== undefined ? Number(originalPrice) : product.originalPrice;
         product.category = category || product.category;
         product.subCategory = subCategory || product.subCategory;
         product.bestseller = bestseller === "true" ? true : bestseller === "false" ? false : product.bestseller;
         product.sizes = parsedSizes;
+        product.colors = parsedColors;
+        product.fabric = fabric !== undefined ? fabric : product.fabric;
+        product.careInstructions = careInstructions !== undefined ? careInstructions : product.careInstructions;
+        product.sku = sku !== undefined ? sku : product.sku;
+        product.stockQuantity = stockQuantity !== undefined ? Number(stockQuantity) : product.stockQuantity;
         product.image = updatedImages;
 
         await product.save();
@@ -153,7 +196,5 @@ const updateProduct = async (req, res) => {
         res.status(500).json({ success: false, message: error.message });
     }
 };
-
-
 
 export { listProducts, addProduct, removeProduct, singleProduct, updateProduct }
