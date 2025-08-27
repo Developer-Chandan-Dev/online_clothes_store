@@ -54,6 +54,7 @@ const BestSeller = () => {
                 bestseller={item?.bestseller}
                 colors={item?.colors}
                 sizes={item?.sizes}
+                stockQuantity={item?.stockQuantity}
               />
             ))
           ) : (

@@ -1,10 +1,10 @@
+/* eslint-disable react/prop-types */
 import { useContext, useState } from "react";
-import PropTypes from "prop-types";
 import { ShopContext } from "../context/ShopContext";
 import { FavsContext } from "../context/FavsContext";
 import { toast } from "react-toastify";
 import axios from "axios";
-import { Heart, Eye, ShoppingCart, Star } from "lucide-react";
+import { Heart, Eye, ShoppingCart, Star, Ban } from "lucide-react";
 import { Link } from "react-router-dom";
 
 const ProductItem = ({
@@ -17,6 +17,7 @@ const ProductItem = ({
   bestseller,
   colors,
   sizes,
+  stockQuantity
 }) => {
   const { currency, addToCart, token, backendUrl, navigate } =
     useContext(ShopContext);
@@ -25,6 +26,7 @@ const ProductItem = ({
   const [isImageLoaded, setIsImageLoaded] = useState(false);
 
   const isFavorite = favIds.includes(id);
+  const isOutOfStock = stockQuantity < 5;
 
   // Calculate discount percentage
   const discountPercentage = originalPrice
@@ -34,6 +36,11 @@ const ProductItem = ({
   const toggleFavorite = async (e) => {
     e.preventDefault();
     e.stopPropagation();
+
+    if (isOutOfStock) {
+      toast.error("This product is out of stock");
+      return;
+    }
 
     if (token) {
       try {
@@ -59,6 +66,12 @@ const ProductItem = ({
   const handleAddToCart = (e) => {
     e.preventDefault();
     e.stopPropagation();
+    
+    if (isOutOfStock) {
+      toast.error("This product is out of stock");
+      return;
+    }
+    
     addToCart(id, sizes?.[0] || "", colors?.[0] || "", 1);
     toast.success("Added to cart!");
   };
@@ -66,7 +79,6 @@ const ProductItem = ({
   const handleQuickView = (e) => {
     e.preventDefault();
     e.stopPropagation();
-    // Implement quick view functionality here
     navigate(`/product/${id}`);
   };
 
@@ -84,7 +96,9 @@ const ProductItem = ({
           alt={name}
           className={`w-full h-full object-cover transition-transform duration-500 ${
             isHovered ? "scale-105" : "scale-100"
-          } ${isImageLoaded ? "opacity-100" : "opacity-0"}`}
+          } ${isImageLoaded ? "opacity-100" : "opacity-0"} ${
+            isOutOfStock ? "opacity-70 grayscale" : ""
+          }`}
           onLoad={() => setIsImageLoaded(true)}
         />
 
@@ -93,14 +107,29 @@ const ProductItem = ({
           <div className="absolute inset-0 bg-gray-200 animate-pulse"></div>
         )}
 
+        {/* Out of Stock Overlay */}
+        {isOutOfStock && (
+          <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+            <div className="bg-white/90 px-3 py-2 rounded-lg text-center">
+              <Ban className="w-6 h-6 text-red-500 mx-auto mb-1" />
+              <span className="text-sm font-medium text-red-600">Out of Stock</span>
+            </div>
+          </div>
+        )}
+
         {/* Badges */}
         <div className="absolute top-3 left-3 flex flex-col gap-2">
-          {bestseller && (
+          {isOutOfStock && (
+            <span className="px-2 py-1 bg-red-600 text-white text-xs font-medium rounded-full">
+              Sold Out
+            </span>
+          )}
+          {!isOutOfStock && bestseller && (
             <span className="px-2 py-1 bg-yellow-500 text-white text-xs font-medium rounded-full">
               Bestseller
             </span>
           )}
-          {discountPercentage > 0 && (
+          {!isOutOfStock && discountPercentage > 0 && (
             <span className="px-2 py-1 bg-red-500 text-white text-xs font-medium rounded-full">
               -{discountPercentage}%
             </span>
@@ -110,36 +139,44 @@ const ProductItem = ({
         {/* Favorite Button */}
         <button
           onClick={toggleFavorite}
+          disabled={isOutOfStock}
           className={`absolute top-3 right-3 p-2 rounded-full transition-all duration-300 ${
             isFavorite
               ? "bg-pink-50 text-pink-500"
+              : isOutOfStock
+              ? "bg-gray-100 text-gray-400 cursor-not-allowed"
               : "bg-white/90 text-gray-600 hover:bg-pink-50 hover:text-pink-500"
           } shadow-md`}
         >
           <Heart className={`w-4 h-4 ${isFavorite ? "fill-current" : ""}`} />
         </button>
 
-        {/* Hover Actions */}
-        <div
-          className={`absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center gap-2`}
-        >
-          <button
-            onClick={handleAddToCart}
-            className="transform translate-y-4 group-hover:translate-y-0 transition-transform duration-300 p-3 bg-white rounded-full hover:bg-blue-50 hover:text-blue-600"
+        {/* Hover Actions - Only show if not out of stock */}
+        {!isOutOfStock && (
+          <div
+            className={`absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center gap-2`}
           >
-            <ShoppingCart className="w-4 h-4" />
-          </button>
-          <button
-            onClick={handleQuickView}
-            className="transform translate-y-4 group-hover:translate-y-0 transition-transform duration-200 p-3 bg-white rounded-full hover:bg-gray-50"
-          >
-            <Eye className="w-4 h-4" />
-          </button>
-        </div>
+            <button
+              onClick={handleAddToCart}
+              className="transform translate-y-4 group-hover:translate-y-0 transition-transform duration-300 p-3 bg-white rounded-full hover:bg-blue-50 hover:text-blue-600"
+            >
+              <ShoppingCart className="w-4 h-4" />
+            </button>
+            <button
+              onClick={handleQuickView}
+              className="transform translate-y-4 group-hover:translate-y-0 transition-transform duration-200 p-3 bg-white rounded-full hover:bg-gray-50"
+            >
+              <Eye className="w-4 h-4" />
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Product Info */}
-      <Link to={`/product/${id}`} className="block p-4">
+      <Link 
+        to={`/product/${id}`} 
+        className={`block p-4 ${isOutOfStock ? "opacity-70" : ""}`}
+      >
         {/* Category */}
         <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">
           {category}
@@ -149,6 +186,21 @@ const ProductItem = ({
         <h3 className="font-medium text-gray-900 mb-2 line-clamp-2 hover:text-blue-600 transition-colors">
           {name}
         </h3>
+
+        {/* Stock Status */}
+        {isOutOfStock ? (
+          <div className="mb-3">
+            <span className="text-xs text-red-600 font-medium bg-red-50 px-2 py-1 rounded">
+              Out of Stock
+            </span>
+          </div>
+        ) : stockQuantity <= 10 && (
+          <div className="mb-3">
+            <span className="text-xs text-orange-600 font-medium bg-orange-50 px-2 py-1 rounded">
+              Only {stockQuantity} left!
+            </span>
+          </div>
+        )}
 
         {/* Rating */}
         <div className="flex items-center gap-1 mb-3">
@@ -170,7 +222,7 @@ const ProductItem = ({
 
         {/* Price */}
         <div className="flex items-center gap-2">
-          <span className="text-lg font-semibold text-gray-900">
+          <span className={`text-lg font-semibold ${isOutOfStock ? "text-gray-500" : "text-gray-900"}`}>
             {currency}
             {price.toFixed(2)}
           </span>
@@ -183,7 +235,7 @@ const ProductItem = ({
         </div>
 
         {/* Color Options (if available) */}
-        {colors && colors.length > 0 && (
+        {colors && colors.length > 0 && !isOutOfStock && (
           <div className="flex gap-1 mt-3">
             {colors.slice(0, 4).map((color, index) => (
               <div
@@ -203,44 +255,6 @@ const ProductItem = ({
       </Link>
     </div>
   );
-};
-
-// PropTypes validation
-ProductItem.propTypes = {
-  /** Unique identifier for the product */
-  id: PropTypes.string.isRequired,
-
-  /** Name of the product */
-  name: PropTypes.string.isRequired,
-
-  /** Array of image URLs for the product */
-  image: PropTypes.arrayOf(PropTypes.string).isRequired,
-
-  /** Current price of the product */
-  price: PropTypes.number.isRequired,
-
-  /** Original price before discount (optional) */
-  originalPrice: PropTypes.number,
-
-  /** Category of the product */
-  category: PropTypes.string.isRequired,
-
-  /** Whether the product is a bestseller */
-  bestseller: PropTypes.bool,
-
-  /** Array of available colors (optional) */
-  colors: PropTypes.arrayOf(PropTypes.string),
-
-  /** Array of available sizes (optional) */
-  sizes: PropTypes.arrayOf(PropTypes.string),
-};
-
-// Default props
-ProductItem.defaultProps = {
-  bestseller: false,
-  originalPrice: undefined,
-  colors: [],
-  sizes: [],
 };
 
 export default ProductItem;

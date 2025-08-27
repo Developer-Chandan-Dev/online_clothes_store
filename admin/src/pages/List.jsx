@@ -14,7 +14,7 @@ import {
   ChevronRight,
   ChevronsLeft,
   ChevronsRight,
-  Loader2
+  Loader2,
 } from "lucide-react";
 import UpdateProductPopup from "../components/UpdateProductPopup";
 import PreviewProduct from "../components/ProductPreview";
@@ -422,30 +422,34 @@ const List = ({ token }) => {
         {!isLoading && currentProducts.length > 0 ? (
           currentProducts.map((item, index) => (
             <div
-              className="grid grid-cols-[1fr_3fr_1fr] md:grid-cols-[1fr_3fr_1fr_1fr_1fr] items-center gap-2 py-1 px-2 border text-sm"
+              className={`grid grid-cols-[1fr_3fr_1fr] md:grid-cols-[1fr_3fr_1fr_1fr_1fr] items-center gap-2 py-1 px-2 border text-sm ${
+                item?.stockQuantity < 5 ? "bg-red-200 border border-red-500" : ""
+              }`}
               key={index}
             >
-              <img className="w-12" src={item.image[0]} alt="" />
-              <p>{item.name}</p>
-              <p>{item.category}</p>
-              <p>
-                {currency}
-                {item.price}
-              </p>
-              <p className="text-right md:text-center text-lg flex items-center justify-center gap-2">
-                <EyeIcon
-                  onClick={() => handlePreviewClick(item)}
-                  className="size-[20px] transition-all text-indigo-400 hover:text-indigo-600 cursor-pointer"
-                />
-                <Trash2
-                  onClick={() => removeProduct(item._id)}
-                  className="size-[20px] transition-all text-red-400 hover:text-red-600 cursor-pointer"
-                />
-                <Edit
-                  onClick={() => handleEditClick(item)}
-                  className="size-[18px] transition-all text-blue-400 mt-[2px] hover:text-blue-600 cursor-pointer"
-                />
-              </p>
+              <>
+                <img className="w-12" src={item.image[0]} alt={item.name} />
+                <p>{item.name}</p>
+                <p>{item.category}</p>
+                <p>
+                  {currency}
+                  {item.price}
+                </p>
+                <p className="text-right md:text-center text-lg flex items-center justify-center gap-2">
+                  <EyeIcon
+                    onClick={() => handlePreviewClick(item)}
+                    className="size-[20px] transition-all text-indigo-400 hover:text-indigo-600 cursor-pointer"
+                  />
+                  <Trash2
+                    onClick={() => removeProduct(item._id)}
+                    className="size-[20px] transition-all text-red-400 hover:text-red-600 cursor-pointer"
+                  />
+                  <Edit
+                    onClick={() => handleEditClick(item)}
+                    className="size-[18px] transition-all text-blue-400 mt-[2px] hover:text-blue-600 cursor-pointer"
+                  />
+                </p>
+              </>
             </div>
           ))
         ) : (

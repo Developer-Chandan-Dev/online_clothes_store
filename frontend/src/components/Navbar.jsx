@@ -9,7 +9,6 @@ const Navbar = () => {
   const [visible, setVisible] = useState(false);
 
   const {
-    setShowSearch,
     getCartCount,
     navigate,
     token,
@@ -50,7 +49,7 @@ const Navbar = () => {
       </ul>
 
       <div className="flex items-center gap-5">
-        <img
+        {/* <img
           onClick={() => {
             setShowSearch(true);
             navigate("/collection");
@@ -58,7 +57,7 @@ const Navbar = () => {
           src={assets.search_icon}
           className="w-5 cursor-pointer"
           alt=""
-        />
+        /> */}
 
         <div className="group relative">
           <img

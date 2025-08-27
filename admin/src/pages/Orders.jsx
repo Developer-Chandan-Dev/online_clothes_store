@@ -1,3 +1,4 @@
+/* eslint-disable no-unused-vars */
 /* eslint-disable react/prop-types */
 import { useEffect, useState, useMemo } from "react";
 import axios from "axios";
@@ -16,6 +17,11 @@ import {
   ChevronsRight,
   Loader2
 } from "lucide-react";
+import OrderCard from "../components/order/OrderCard";
+import FilterPanel from "../components/order/FilterPanel";
+import Pagination from "../components/order/Pagination";
+
+
 
 const Orders = ({ token }) => {
   const [orders, setOrders] = useState([]);
@@ -39,9 +45,8 @@ const Orders = ({ token }) => {
     setIsLoading(true);
 
     try {
-      const response = await axios.post(
+      const response = await axios.get(
         backendUrl + "/api/order/list",
-        {},
         { headers: { token } }
       );
       if (response.data.success) {
@@ -52,7 +57,8 @@ const Orders = ({ token }) => {
         toast.error(response.data.message);
       }
     } catch (error) {
-      toast.error(error.message);
+      console.log(error, 334);
+      toast.error(error.response?.data?.message || error.message);
     } finally {
       setIsLoading(false);
     }
@@ -66,10 +72,11 @@ const Orders = ({ token }) => {
     if (searchTerm) {
       result = result.filter(
         (order) =>
-          (order.address.firstName + " " + order.address.lastName)
+          (order.shippingAddress.firstName + " " + order.shippingAddress.lastName)
             .toLowerCase()
             .includes(searchTerm.toLowerCase()) ||
-          order.address.phone.includes(searchTerm) ||
+          order.shippingAddress.phone.includes(searchTerm) ||
+          order.shippingAddress.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
           order._id.toLowerCase().includes(searchTerm.toLowerCase()) ||
           order.items.some((item) =>
             item.name.toLowerCase().includes(searchTerm.toLowerCase())
@@ -84,9 +91,7 @@ const Orders = ({ token }) => {
 
     // Apply payment filter
     if (paymentFilter !== "all") {
-      result = result.filter((order) =>
-        paymentFilter === "paid" ? order.payment : !order.payment
-      );
+      result = result.filter((order) => order.paymentStatus === paymentFilter);
     }
 
     // Apply date range filter
@@ -94,7 +99,7 @@ const Orders = ({ token }) => {
       const startDate = new Date(dateRange.start);
       const endDate = new Date(dateRange.end);
       result = result.filter((order) => {
-        const orderDate = new Date(order.date);
+        const orderDate = new Date(order.createdAt);
         return orderDate >= startDate && orderDate <= endDate;
       });
     }
@@ -102,16 +107,16 @@ const Orders = ({ token }) => {
     // Apply sorting
     switch (sortOption) {
       case "newest":
-        result = result.sort((a, b) => new Date(b.date) - new Date(a.date));
+        result = result.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
         break;
       case "oldest":
-        result = result.sort((a, b) => new Date(a.date) - new Date(b.date));
+        result = result.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
         break;
       case "amount-high":
-        result = result.sort((a, b) => b.amount - a.amount);
+        result = result.sort((a, b) => b.totalAmount - a.totalAmount);
         break;
       case "amount-low":
-        result = result.sort((a, b) => a.amount - b.amount);
+        result = result.sort((a, b) => a.totalAmount - b.totalAmount);
         break;
       case "items-high":
         result = result.sort((a, b) => b.items.length - a.items.length);
@@ -124,7 +129,7 @@ const Orders = ({ token }) => {
     }
 
     setFilteredOrders(result);
-    setCurrentPage(1); // Reset to first page when filters change
+    setCurrentPage(1);
   }, [orders, searchTerm, statusFilter, paymentFilter, dateRange, sortOption]);
 
   // Get current orders for the current page
@@ -148,11 +153,12 @@ const Orders = ({ token }) => {
       );
       if (response.data.success) {
         await fetchAllOrders();
+        toast.success("Status updated successfully");
       } else {
         toast.error(response.data.message);
       }
     } catch (error) {
-      console.log(error);
+      toast.error(error.response?.data?.message || "Failed to update status");
     }
   };
 
@@ -164,7 +170,7 @@ const Orders = ({ token }) => {
 
     try {
       const response = await axios.delete(
-        backendUrl + `/api/order/userorders/${id}`,
+        backendUrl + `/api/order/${id}`,
         { headers: { token } }
       );
       if (response?.data?.success) {
@@ -174,19 +180,9 @@ const Orders = ({ token }) => {
         toast.error(response?.data?.message || "Failed to delete order");
       }
     } catch (error) {
-      toast.error(error.message);
+      toast.error(error.response?.data?.message || error.message);
     }
   };
-
-  // Get unique statuses for filter dropdown
-  const statuses = [
-    "all",
-    "Order Placed",
-    "Packing",
-    "Shipped",
-    "Out for delivery",
-    "Delivered",
-  ];
 
   const resetFilters = () => {
     setSearchTerm("");
@@ -194,82 +190,6 @@ const Orders = ({ token }) => {
     setPaymentFilter("all");
     setDateRange({ start: "", end: "" });
     setSortOption("newest");
-  };
-
-  // Pagination controls
-  const goToPage = (page) => {
-    if (page >= 1 && page <= totalPages) {
-      setCurrentPage(page);
-    }
-  };
-
-  const renderPaginationButtons = () => {
-    const buttons = [];
-    const maxVisibleButtons = 5;
-
-    let startPage = Math.max(
-      1,
-      currentPage - Math.floor(maxVisibleButtons / 2)
-    );
-    let endPage = Math.min(totalPages, startPage + maxVisibleButtons - 1);
-
-    if (endPage - startPage + 1 < maxVisibleButtons) {
-      startPage = Math.max(1, endPage - maxVisibleButtons + 1);
-    }
-
-    if (startPage > 1) {
-      buttons.push(
-        <button
-          key="first"
-          onClick={() => goToPage(1)}
-          className="px-3 py-1 border rounded hover:bg-gray-100"
-        >
-          1
-        </button>
-      );
-      if (startPage > 2) {
-        buttons.push(
-          <span key="ellipsis-start" className="px-2">
-            ...
-          </span>
-        );
-      }
-    }
-
-    for (let i = startPage; i <= endPage; i++) {
-      buttons.push(
-        <button
-          key={i}
-          onClick={() => goToPage(i)}
-          className={`px-3 py-1 border rounded ${
-            currentPage === i ? "bg-blue-500 text-white" : "hover:bg-gray-100"
-          }`}
-        >
-          {i}
-        </button>
-      );
-    }
-
-    if (endPage < totalPages) {
-      if (endPage < totalPages - 1) {
-        buttons.push(
-          <span key="ellipsis-end" className="px-2">
-            ...
-          </span>
-        );
-      }
-      buttons.push(
-        <button
-          key="last"
-          onClick={() => goToPage(totalPages)}
-          className="px-3 py-1 border rounded hover:bg-gray-100"
-        >
-          {totalPages}
-        </button>
-      );
-    }
-
-    return buttons;
   };
 
   useEffect(() => {
@@ -287,7 +207,7 @@ const Orders = ({ token }) => {
           <input
             type="text"
             placeholder="Search orders..."
-            className="w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
@@ -303,7 +223,7 @@ const Orders = ({ token }) => {
         <div className="flex gap-2">
           <button
             onClick={() => setShowFilters(!showFilters)}
-            className="flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+            className="flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors text-sm"
           >
             <Filter className="h-4 w-4" />
             <span>Filters</span>
@@ -312,7 +232,7 @@ const Orders = ({ token }) => {
           <select
             value={sortOption}
             onChange={(e) => setSortOption(e.target.value)}
-            className="px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
           >
             <option value="newest">Newest First</option>
             <option value="oldest">Oldest First</option>
@@ -324,81 +244,16 @@ const Orders = ({ token }) => {
         </div>
       </div>
 
-      {/* Expanded Filters Panel */}
-      {showFilters && (
-        <div className="mb-6 p-4 bg-gray-50 rounded-lg border">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {/* Status Filter */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Order Status
-              </label>
-              <select
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-                className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                {statuses.map((status) => (
-                  <option key={status} value={status}>
-                    {status}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Payment Filter */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Payment Status
-              </label>
-              <select
-                value={paymentFilter}
-                onChange={(e) => setPaymentFilter(e.target.value)}
-                className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="all">All</option>
-                <option value="paid">Paid</option>
-                <option value="unpaid">Unpaid</option>
-              </select>
-            </div>
-
-            {/* Date Range Filter */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Date Range
-              </label>
-              <div className="grid grid-cols-2 gap-2">
-                <input
-                  type="date"
-                  value={dateRange.start}
-                  onChange={(e) =>
-                    setDateRange({ ...dateRange, start: e.target.value })
-                  }
-                  className="px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-                <input
-                  type="date"
-                  value={dateRange.end}
-                  onChange={(e) =>
-                    setDateRange({ ...dateRange, end: e.target.value })
-                  }
-                  className="px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-            </div>
-
-            {/* Reset Button */}
-            <div className="flex items-end">
-              <button
-                onClick={resetFilters}
-                className="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded-lg transition-colors"
-              >
-                Reset Filters
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <FilterPanel
+        showFilters={showFilters}
+        statusFilter={statusFilter}
+        setStatusFilter={setStatusFilter}
+        paymentFilter={paymentFilter}
+        setPaymentFilter={setPaymentFilter}
+        dateRange={dateRange}
+        setDateRange={setDateRange}
+        resetFilters={resetFilters}
+      />
 
       {/* Results Count and Orders Per Page Selector */}
       <div className="mb-2 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
@@ -432,131 +287,40 @@ const Orders = ({ token }) => {
           <div className="flex justify-center items-center h-96">
             <div className="text-center">
               <Loader2 className="h-16 w-16 animate-spin text-gray-400 mx-auto" />
-              <p className="mt-4 text-gray-600">Loading products...</p>
+              <p className="mt-4 text-gray-600">Loading orders...</p>
             </div>
           </div>
         )}
 
         {!isLoading && currentOrders.length > 0 ? (
           currentOrders.map((order) => (
-            <div
-              className="grid grid-cols-1 sm:grid-cols-[0.5fr_2fr_1fr] lg:grid-cols-[0.5fr_2fr_1fr_1fr_1fr_1fr_0.5fr] gap-3 items-start border-2 border-gray-200 p-5 md:p-8 my-3 md:my-4 text-xs sm:text-sm text-gray-700"
+            <OrderCard
               key={order._id}
-            >
-              <img className="w-12" src={assets.parcel_icon} alt="" />
-              <div>
-                <div>
-                  {order.items.map((item, index) => (
-                    <p className="py-0.5" key={index}>
-                      {item.name} x {item.quantity} {item.size}
-                      {index !== order.items.length - 1 && ","}
-                    </p>
-                  ))}
-                </div>
-                <p className="mt-3 mb-2 font-medium">
-                  {order.address.firstName + " " + order.address.lastName}
-                </p>
-                <div>
-                  <p>{order.address.street + ","}</p>
-                  <p>
-                    {order.address.city +
-                      ", " +
-                      order.address.state +
-                      ", " +
-                      order.address.country +
-                      ", " +
-                      order.address.zipcode}
-                  </p>
-                </div>
-                <p>{order.address.phone}</p>
-              </div>
-              <div>
-                <p className="text-sm sm:text-[15px]">
-                  Items: {order.items.length}
-                </p>
-                <p className="mt-3">Method: {order.paymentMethod}</p>
-                <p>Payment: {order.payment ? "Done" : "Pending"}</p>
-                <p>Date: {new Date(order.date).toLocaleDateString()}</p>
-              </div>
-              <p className="text-sm sm:text-[15px]">
-                {currency}
-                {order.amount}
-              </p>
-              <select
-                onChange={(event) => statusHandler(event, order._id)}
-                value={order.status}
-                className="p-2 font-semibold border rounded"
-              >
-                <option value="Order Placed">Order Placed</option>
-                <option value="Packing">Packing</option>
-                <option value="Shipped">Shipped</option>
-                <option value="Out for delivery">Out for delivery</option>
-                <option value="Delivered">Delivered</option>
-              </select>
-              <div className="flex items-center justify-end gap-2">
-                <Trash2
-                  className="size-[20px] transition-all text-red-400 hover:text-red-600 cursor-pointer"
-                  onClick={() => handleOrderDelete(order._id)}
-                />
-                <Edit className="size-[18px] transition-all text-blue-400 hover:text-blue-600 cursor-pointer" />
-              </div>
-            </div>
+              order={order}
+              onStatusChange={statusHandler}
+              onDelete={handleOrderDelete}
+            />
           ))
         ) : (
-          <div className="p-8 text-center text-gray-500">
-            No orders found matching your criteria
-          </div>
+          !isLoading && (
+            <div className="p-8 text-center text-gray-500">
+              No orders found matching your criteria
+            </div>
+          )
         )}
       </div>
 
       {/* Pagination Controls */}
       {filteredOrders.length > 0 && (
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-4">
-          <div className="text-sm text-gray-500">
-            Page {currentPage} of {totalPages}
-          </div>
-
-          <div className="flex items-center gap-2">
-            {/* First Page Button */}
-            <button
-              onClick={() => goToPage(1)}
-              disabled={currentPage === 1}
-              className="p-1 border rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100"
-            >
-              <ChevronsLeft className="h-4 w-4" />
-            </button>
-
-            {/* Previous Page Button */}
-            <button
-              onClick={() => goToPage(currentPage - 1)}
-              disabled={currentPage === 1}
-              className="p-1 border rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100"
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </button>
-
-            {/* Page Number Buttons */}
-            <div className="flex gap-1">{renderPaginationButtons()}</div>
-
-            {/* Next Page Button */}
-            <button
-              onClick={() => goToPage(currentPage + 1)}
-              disabled={currentPage === totalPages}
-              className="p-1 border rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100"
-            >
-              <ChevronRight className="h-4 w-4" />
-            </button>
-
-            {/* Last Page Button */}
-            <button
-              onClick={() => goToPage(totalPages)}
-              disabled={currentPage === totalPages}
-              className="p-1 border rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100"
-            >
-              <ChevronsRight className="h-4 w-4" />
-            </button>
-          </div>
-        </div>
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={setCurrentPage}
+          ordersPerPage={ordersPerPage}
+          onOrdersPerPageChange={setOrdersPerPage}
+          totalOrders={orders.length}
+          filteredOrders={filteredOrders.length}
+        />
       )}
     </div>
   );

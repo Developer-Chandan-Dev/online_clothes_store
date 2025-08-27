@@ -6,8 +6,19 @@ import Review from "../components/Review";
 import { FavsContext } from "../context/FavsContext";
 import { toast } from "react-toastify";
 import axios from "axios";
-import { Heart, Star, Truck, Shield, RotateCcw, ChevronRight, Info, Check } from "lucide-react";
-
+import {
+  Heart,
+  Star,
+  Truck,
+  Shield,
+  RotateCcw,
+  ChevronRight,
+  Info,
+  Check,
+  Ban,
+} from "lucide-react";
+import BuyNowDialog from "../components/BuyNowDialog";
+  
 const Product = () => {
   const { productId } = useParams();
   const { products, currency, addToCart, token, backendUrl } =
@@ -18,8 +29,12 @@ const Product = () => {
   const [selectedColor, setSelectedColor] = useState("");
   const [activeTab, setActiveTab] = useState("description");
   const [quantity, setQuantity] = useState(1);
+  const [isBuyNowOpen, setIsBuyNowOpen] = useState(false);
+
   const { favIds, setFavIds, getFavoritesProducts, setFavsCount } =
     useContext(FavsContext);
+
+  const isOutOfStock = productData?.stockQuantity < 5;
 
   const fetchProductData = async () => {
     products.map((item) => {
@@ -38,6 +53,11 @@ const Product = () => {
   const isFavorite = favIds.includes(productId);
 
   const toggleFavorite = async (productId) => {
+    if (isOutOfStock) {
+      toast.error("This product is out of stock");
+      return;
+    }
+
     if (token) {
       try {
         const res = await axios.put(
@@ -60,7 +80,31 @@ const Product = () => {
     }
   };
 
+  const handleBuyNow = () => {
+    if (isOutOfStock) {
+      toast.error("This product is out of stock");
+      return;
+    }
+
+    if (!token) {
+      toast.error("Please login to proceed with purchase");
+      return;
+    }
+
+    if (!selectedSize && productData.sizes.length > 0) {
+      toast.error("Please select a size");
+      return;
+    }
+
+    setIsBuyNowOpen(true);
+  };
+
   const handleAddToCart = () => {
+    if (isOutOfStock) {
+      toast.error("This product is out of stock");
+      return;
+    }
+
     if (!selectedSize && productData.sizes.length > 0) {
       toast.error("Please select a size");
       return;
@@ -82,8 +126,12 @@ const Product = () => {
   };
 
   // Calculate discount percentage if original price exists
-  const discountPercentage = productData.originalPrice 
-    ? Math.round(((productData.originalPrice - productData.price) / productData.originalPrice) * 100)
+  const discountPercentage = productData?.originalPrice
+    ? Math.round(
+        ((productData.originalPrice - productData.price) /
+          productData.originalPrice) *
+          100
+      )
     : 0;
 
   return productData ? (
@@ -98,6 +146,19 @@ const Product = () => {
         <ChevronRight size={16} className="mx-2" />
         <span className="text-gray-900">{productData.name}</span>
       </div>
+      
+      {/* Out of Stock Banner */}
+      {isOutOfStock && (
+        <div className="mb-6 bg-red-50 border border-red-200 rounded-lg p-4">
+          <div className="flex items-center gap-2 text-red-800">
+            <Ban size={20} />
+            <span className="font-medium">This product is currently out of stock</span>
+          </div>
+          <p className="text-red-600 text-sm mt-1">
+            We expect more stock soon. Please check back later.
+          </p>
+        </div>
+      )}
 
       {/* Product Section */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 mb-16">
@@ -110,8 +171,8 @@ const Product = () => {
                 key={index}
                 className={`border-2 rounded-md p-1 cursor-pointer transition-all ${
                   selectedImage === img ? "border-blue-500" : "border-gray-200"
-                }`}
-                onClick={() => setSelectedImage(img)}
+                } ${isOutOfStock ? "opacity-60" : ""}`}
+                onClick={() => !isOutOfStock && setSelectedImage(img)}
               >
                 <img
                   src={img}
@@ -127,9 +188,10 @@ const Product = () => {
             <div className="absolute top-4 right-4 z-10">
               <button
                 onClick={() => toggleFavorite(productId)}
+                disabled={isOutOfStock}
                 className={`p-3 rounded-full shadow-lg transition-all ${
                   isFavorite ? "bg-pink-50" : "bg-white"
-                } hover:bg-pink-50`}
+                } ${isOutOfStock ? "opacity-60 cursor-not-allowed" : "hover:bg-pink-50"}`}
               >
                 <Heart
                   className={`w-6 h-6 ${
@@ -138,14 +200,20 @@ const Product = () => {
                 />
               </button>
             </div>
-            
-            {discountPercentage > 0 && (
+
+            {discountPercentage > 0 && !isOutOfStock && (
               <div className="absolute top-4 left-4 bg-red-500 text-white px-3 py-1 rounded-full text-sm font-medium z-10">
                 -{discountPercentage}%
               </div>
             )}
-            
-            <div className="aspect-square overflow-hidden rounded-xl bg-gray-100">
+
+            {isOutOfStock && (
+              <div className="absolute top-4 left-4 bg-red-600 text-white px-3 py-1 rounded-full text-sm font-medium z-10">
+                Sold Out
+              </div>
+            )}
+
+            <div className={`aspect-square overflow-hidden rounded-xl bg-gray-100 ${isOutOfStock ? "opacity-60 grayscale" : ""}`}>
               <img
                 src={selectedImage}
                 alt={productData.name}
@@ -158,7 +226,9 @@ const Product = () => {
         {/* Product Info */}
         <div className="space-y-6">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">{productData.name}</h1>
+            <h1 className="text-3xl font-bold text-gray-900">
+              {productData.name}
+            </h1>
             <div className="flex items-center gap-2 mt-2">
               <div className="flex items-center">
                 {[1, 2, 3, 4, 5].map((star) => (
@@ -166,13 +236,15 @@ const Product = () => {
                     key={star}
                     size={16}
                     className={`${
-                      star <= 4 ? "fill-yellow-400 text-yellow-400" : "text-gray-300"
+                      star <= 4
+                        ? "fill-yellow-400 text-yellow-400"
+                        : "text-gray-300"
                     }`}
                   />
                 ))}
               </div>
               <span className="text-sm text-gray-500">(122 reviews)</span>
-              {productData.bestseller && (
+              {productData.bestseller && !isOutOfStock && (
                 <span className="ml-3 px-2 py-1 bg-yellow-100 text-yellow-800 text-xs font-medium rounded-full">
                   Bestseller
                 </span>
@@ -182,35 +254,58 @@ const Product = () => {
 
           {/* Pricing */}
           <div className="flex items-center gap-3">
-            <p className="text-3xl font-bold text-gray-900">
+            <p className={`text-3xl font-bold ${isOutOfStock ? "text-gray-500" : "text-gray-900"}`}>
               {currency}
               {productData.price.toFixed(2)}
             </p>
-            {productData.originalPrice && (
+            {productData.originalPrice && !isOutOfStock && (
               <>
                 <p className="text-xl text-gray-500 line-through">
                   {currency}
                   {productData.originalPrice.toFixed(2)}
                 </p>
-                <span className="text-red-600 font-medium">{discountPercentage}% off</span>
+                <span className="text-red-600 font-medium">
+                  {discountPercentage}% off
+                </span>
               </>
             )}
           </div>
 
+          {/* Stock Status */}
+          {isOutOfStock ? (
+            <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+              <p className="text-red-800 font-medium">Out of Stock</p>
+              <p className="text-red-600 text-sm">This product is currently unavailable</p>
+            </div>
+          ) : productData.stockQuantity <= 10 && (
+            <div className="bg-orange-50 border border-orange-200 rounded-lg p-3">
+              <p className="text-orange-800 font-medium">
+                Only {productData.stockQuantity} left in stock!
+              </p>
+              <p className="text-orange-600 text-sm">Order soon to avoid disappointment</p>
+            </div>
+          )}
+
           {/* Short Description */}
-          <p className="text-gray-600 leading-relaxed">{productData.description}</p>
+          <p className="text-gray-600 leading-relaxed">
+            {productData.description}
+          </p>
 
           {/* Color Selection */}
-          {productData.colors && productData.colors.length > 0 && (
+          {productData.colors && productData.colors.length > 0 && !isOutOfStock && (
             <div className="space-y-3">
-              <p className="font-medium text-gray-900">Color: {selectedColor}</p>
+              <p className="font-medium text-gray-900">
+                Color: {selectedColor}
+              </p>
               <div className="flex gap-2">
                 {productData.colors.map((color) => (
                   <button
                     key={color}
                     onClick={() => setSelectedColor(color)}
                     className={`w-10 h-10 rounded-full border-2 transition-all ${
-                      selectedColor === color ? "border-gray-900 ring-2 ring-offset-2 ring-gray-300" : "border-gray-200"
+                      selectedColor === color
+                        ? "border-gray-900 ring-2 ring-offset-2 ring-gray-300"
+                        : "border-gray-200"
                     }`}
                     style={{ backgroundColor: color }}
                     title={color}
@@ -221,7 +316,7 @@ const Product = () => {
           )}
 
           {/* Size Selection */}
-          {productData.sizes && productData.sizes.length > 0 && (
+          {productData.sizes && productData.sizes.length > 0 && !isOutOfStock && (
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <p className="font-medium text-gray-900">Select Size</p>
@@ -249,41 +344,58 @@ const Product = () => {
           )}
 
           {/* Quantity Selector */}
-          <div className="space-y-3">
-            <p className="font-medium text-gray-900">Quantity</p>
-            <div className="flex items-center gap-3">
-              <div className="flex items-center border border-gray-300 rounded-lg">
-                <button
-                  onClick={decrementQuantity}
-                  className="px-3 py-2 text-gray-600 hover:text-gray-900 disabled:opacity-50"
-                  disabled={quantity <= 1}
-                >
-                  -
-                </button>
-                <span className="px-4 py-2 border-x border-gray-300">{quantity}</span>
-                <button
-                  onClick={incrementQuantity}
-                  className="px-3 py-2 text-gray-600 hover:text-gray-900 disabled:opacity-50"
-                  disabled={quantity >= (productData.stockQuantity || 10)}
-                >
-                  +
-                </button>
+          {!isOutOfStock && (
+            <div className="space-y-3">
+              <p className="font-medium text-gray-900">Quantity</p>
+              <div className="flex items-center gap-3">
+                <div className="flex items-center border border-gray-300 rounded-lg">
+                  <button
+                    onClick={decrementQuantity}
+                    className="px-3 py-2 text-gray-600 hover:text-gray-900 disabled:opacity-50"
+                    disabled={quantity <= 1}
+                  >
+                    -
+                  </button>
+                  <span className="px-4 py-2 border-x border-gray-300">
+                    {quantity}
+                  </span>
+                  <button
+                    onClick={incrementQuantity}
+                    className="px-3 py-2 text-gray-600 hover:text-gray-900 disabled:opacity-50"
+                    disabled={quantity >= (productData.stockQuantity || 10)}
+                  >
+                    +
+                  </button>
+                </div>
+                <span className="text-sm text-gray-500">
+                  {productData.stockQuantity || 10} available
+                </span>
               </div>
-              <span className="text-sm text-gray-500">
-                {productData.stockQuantity || 10} available
-              </span>
             </div>
-          </div>
+          )}
 
           {/* Action Buttons */}
-          <div className="flex gap-4 pt-4">
+          <div className="flex flex-wrap gap-4 pt-4">
             <button
               onClick={handleAddToCart}
-              className="flex-1 bg-blue-600 text-white py-3 px-6 rounded-lg font-medium hover:bg-blue-700 transition-colors shadow-md"
+              disabled={isOutOfStock}
+              className={`sm:flex-1 py-3 px-6 rounded-lg font-medium shadow-md transition-colors ${
+                isOutOfStock
+                  ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                  : "bg-blue-600 text-white hover:bg-blue-700"
+              }`}
             >
-              Add to Cart
+              {isOutOfStock ? "Out of Stock" : "Add to Cart"}
             </button>
-            <button className="px-6 py-3 border border-gray-300 rounded-lg font-medium hover:bg-gray-50 transition-colors">
+            <button
+              onClick={handleBuyNow}
+              disabled={isOutOfStock}
+              className={`px-6 py-3 border rounded-lg font-medium transition-colors ${
+                isOutOfStock
+                  ? "border-gray-300 text-gray-400 cursor-not-allowed"
+                  : "border-gray-300 text-gray-700 hover:bg-gray-50"
+              }`}
+            >
               Buy Now
             </button>
           </div>
@@ -314,10 +426,11 @@ const Product = () => {
           </div>
         </div>
       </div>
-
+      
+      {/* Rest of the component remains the same */}
       {/* Product Details Tabs */}
       <div className="border-b border-gray-200 mb-8">
-        <nav className="-mb-px flex space-x-8">
+        <nav className="-mb-px flex flex-wrap space-x-3 sm:space-x-8">
           {[
             { id: "description", label: "Description" },
             { id: "details", label: "Product Details" },
@@ -338,7 +451,7 @@ const Product = () => {
           ))}
         </nav>
       </div>
-
+      
       {/* Tab Content */}
       <div className="mb-16">
         {activeTab === "description" && (
@@ -347,14 +460,14 @@ const Product = () => {
             <p className="text-gray-600 leading-relaxed mb-6">
               {productData.longDescription || productData.description}
             </p>
-            
+
             {productData.fabric && (
               <div className="mb-4">
                 <h4 className="font-medium text-gray-900">Fabric & Material</h4>
                 <p className="text-gray-600">{productData.fabric}</p>
               </div>
             )}
-            
+
             {productData.careInstructions && (
               <div>
                 <h4 className="font-medium text-gray-900">Care Instructions</h4>
@@ -367,11 +480,15 @@ const Product = () => {
         {activeTab === "details" && (
           <div className="space-y-4">
             <h3 className="text-xl font-semibold mb-4">Product Details</h3>
-            {productData.productDetails && productData.productDetails.length > 0 ? (
+            {productData.productDetails &&
+            productData.productDetails.length > 0 ? (
               <ul className="space-y-2">
                 {productData.productDetails.map((detail, index) => (
                   <li key={index} className="flex items-start">
-                    <Check size={16} className="text-green-500 mt-1 mr-2 flex-shrink-0" />
+                    <Check
+                      size={16}
+                      className="text-green-500 mt-1 mr-2 flex-shrink-0"
+                    />
                     <span className="text-gray-600">{detail}</span>
                   </li>
                 ))}
@@ -382,16 +499,16 @@ const Product = () => {
           </div>
         )}
 
-        {activeTab === "reviews" && (
-          <Review productId={productId} />
-        )}
+        {activeTab === "reviews" && <Review productId={productId} />}
 
         {activeTab === "shipping" && (
           <div className="space-y-6">
             <h3 className="text-xl font-semibold">Shipping & Returns</h3>
             <div className="grid md:grid-cols-2 gap-8">
               <div>
-                <h4 className="font-medium text-gray-900 mb-3">Shipping Information</h4>
+                <h4 className="font-medium text-gray-900 mb-3">
+                  Shipping Information
+                </h4>
                 <ul className="space-y-2 text-gray-600">
                   <li>• Free standard shipping on orders over $50</li>
                   <li>• Express shipping available at additional cost</li>
@@ -400,7 +517,9 @@ const Product = () => {
                 </ul>
               </div>
               <div>
-                <h4 className="font-medium text-gray-900 mb-3">Return Policy</h4>
+                <h4 className="font-medium text-gray-900 mb-3">
+                  Return Policy
+                </h4>
                 <ul className="space-y-2 text-gray-600">
                   <li>• Easy 30-day return policy</li>
                   <li>• Items must be unworn and in original condition</li>
@@ -412,12 +531,22 @@ const Product = () => {
           </div>
         )}
       </div>
-
+      
       {/* Related Products */}
       <RelatedProducts
-        category={productData.category}
+        category={productData?.category}
         subCategory={productData.subCategory}
         currentProductId={productId}
+      />
+      
+      {/* Buy Now Dialog */}
+      <BuyNowDialog
+        product={productData}
+        isOpen={isBuyNowOpen}
+        onClose={() => setIsBuyNowOpen(false)}
+        selectedSize={selectedSize}
+        selectedColor={selectedColor}
+        quantity={quantity}
       />
     </div>
   ) : (
